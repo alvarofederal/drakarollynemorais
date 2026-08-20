@@ -49,7 +49,7 @@ export function CardAula({
           sizes="200px"
           className={cn(
             "object-cover transition-transform duration-500 group-hover:scale-105",
-            !aula.liberada && "opacity-40 grayscale"
+            !aula.liberada && "opacity-75"
           )}
         />
       ) : (
@@ -57,7 +57,7 @@ export function CardAula({
           aria-hidden
           className={cn(
             "absolute inset-0 bg-gradient-to-br from-km-brand-soft to-km-sunk",
-            !aula.liberada && "opacity-50"
+            !aula.liberada && "opacity-70"
           )}
         />
       )}
@@ -65,7 +65,7 @@ export function CardAula({
       {/* véu para o texto ficar legível sobre qualquer imagem */}
       <div
         aria-hidden
-        className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10"
+        className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent"
       />
 
       {/* selo de canto */}

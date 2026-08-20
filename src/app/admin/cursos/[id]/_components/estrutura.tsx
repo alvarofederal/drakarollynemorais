@@ -9,6 +9,7 @@ import {
   EyeOff,
   FileText,
   Loader2,
+  Pencil,
   Plus,
   Trash2,
   Video,
@@ -168,7 +169,9 @@ export function Estrutura({ cursoId, modulos }: { cursoId: string; modulos: Modu
                       </button>
                       <span className="flex flex-wrap items-center gap-x-2 font-mono text-[10px] text-km-ink-faint">
                         <span>{aula.publicada ? "publicada" : "rascunho"}</span>
-                        {aula.gratuita && <span className="text-km-brand">· amostra</span>}
+                        {aula.gratuita && <span className="text-km-brand">· grátis</span>}
+                        {!aula.capaUrl && <span className="text-km-gold">· sem capa</span>}
+                        {!aula.descricao && <span className="text-km-gold">· sem descrição</span>}
                         {aula.duracaoSegundos ? (
                           <span>· {formatarDuracao(Math.round(aula.duracaoSegundos / 60))}</span>
                         ) : aula.tipo === "VIDEO" && !aula.videoPronto ? (
@@ -186,6 +189,25 @@ export function Estrutura({ cursoId, modulos }: { cursoId: string; modulos: Modu
                     )}
 
                     <div className="flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        className={botaoIcone}
+                        onClick={() =>
+                          setEditando({
+                            id: aula.id,
+                            moduloId: modulo.id,
+                            titulo: aula.titulo,
+                            descricao: aula.descricao,
+                            capaUrl: aula.capaUrl,
+                            tipo: aula.tipo,
+                            gratuita: aula.gratuita,
+                          })
+                        }
+                        aria-label={`Editar ${aula.titulo}: capa, descrição e acesso`}
+                        title="Editar capa e descrição"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
                       <button
                         type="button"
                         className={botaoIcone}

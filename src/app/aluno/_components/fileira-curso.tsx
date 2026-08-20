@@ -50,46 +50,75 @@ export function FileiraCurso({
     el.scrollBy({ left: direcao * el.clientWidth * 0.8, behavior: "smooth" })
   }
 
+  const temCapa = !!curso.capaUrl
   const liberadas = aulas.filter((a) => a.liberada).length
   const proxima = aulas.find((a) => a.liberada && !a.concluida) ?? aulas.find((a) => a.liberada)
 
   return (
     <section className="flex flex-col gap-3">
       {/* faixa de cabeçalho com a capa do curso ao fundo */}
-      <div className="relative overflow-hidden rounded-xl border border-km-line bg-km-surface">
+      <div className="relative min-h-[13rem] overflow-hidden rounded-xl border border-km-line bg-km-surface sm:min-h-[15rem]">
         {curso.capaUrl && (
           <Image
             src={curso.capaUrl}
             alt=""
             fill
             sizes="100vw"
-            className="object-cover opacity-40"
-            priority={false}
+            className="object-cover"
+            priority
           />
         )}
+
+        {/* Véu só onde o texto pousa. A imagem fica viva do meio para a direita —
+            escurecer a faixa inteira, como eu fazia antes, apagava a foto. */}
         <div
           aria-hidden
           className={cn(
             "absolute inset-0",
             curso.capaUrl
-              ? "bg-gradient-to-r from-km-surface via-km-surface/90 to-km-surface/40"
-              : "bg-gradient-to-r from-km-brand-soft/50 to-transparent"
+              ? "bg-gradient-to-r from-black/90 via-black/55 to-black/10"
+              : "bg-gradient-to-r from-km-brand-soft/60 to-transparent"
           )}
         />
+        {curso.capaUrl && (
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 to-transparent"
+          />
+        )}
 
-        <div className="relative flex flex-wrap items-end justify-between gap-4 p-5 sm:p-6">
+        <div className="relative flex min-h-[13rem] flex-wrap items-end justify-between gap-4 p-5 sm:min-h-[15rem] sm:p-6">
           <div className="flex min-w-0 flex-col gap-1.5">
-            <span className="font-mono text-[11px] tracking-[0.14em] text-km-brand lowercase">
+            <span
+              className="font-mono text-[11px] tracking-[0.14em] text-km-brand lowercase drop-shadow"
+            >
               /{curso.slug}
             </span>
-            <h2 className="font-display text-2xl leading-tight font-semibold text-km-ink sm:text-3xl">
+            <h2
+              className={cn(
+                "font-display text-2xl leading-tight font-semibold sm:text-3xl",
+                temCapa ? "text-white drop-shadow" : "text-km-ink"
+              )}
+            >
               {curso.titulo}
             </h2>
             {curso.subtitulo && (
-              <p className="max-w-xl text-sm text-km-ink-soft">{curso.subtitulo}</p>
+              <p
+                className={cn(
+                  "max-w-xl text-sm",
+                  temCapa ? "text-white/80" : "text-km-ink-soft"
+                )}
+              >
+                {curso.subtitulo}
+              </p>
             )}
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 font-mono text-[11px] text-km-ink-faint">
+            <div
+              className={cn(
+                "flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 font-mono text-[11px]",
+                temCapa ? "text-white/65" : "text-km-ink-faint"
+              )}
+            >
               <span>
                 {aulas.length} aula{aulas.length === 1 ? "" : "s"}
               </span>
@@ -107,7 +136,7 @@ export function FileiraCurso({
                         : "acesso liberado"}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-km-ink-faint">
+                <span className="inline-flex items-center gap-1">
                   <Lock className="size-3" />
                   {liberadas} de {aulas.length} liberada{liberadas === 1 ? "" : "s"}
                 </span>
@@ -120,13 +149,13 @@ export function FileiraCurso({
               <>
                 {percentual > 0 && (
                   <div className="flex w-40 items-center gap-2">
-                    <div className="h-1 flex-1 overflow-hidden rounded-full bg-km-sunk">
+                    <div className={cn("h-1 flex-1 overflow-hidden rounded-full", temCapa ? "bg-white/25" : "bg-km-sunk")}>
                       <div
                         className="h-full rounded-full bg-km-brand"
                         style={{ width: `${percentual}%` }}
                       />
                     </div>
-                    <span className="font-mono text-[10px] text-km-ink-faint tabular-nums">
+                    <span className={cn("font-mono text-[10px] tabular-nums", temCapa ? "text-white/80" : "text-km-ink-faint")}>
                       {percentual}%
                     </span>
                   </div>
