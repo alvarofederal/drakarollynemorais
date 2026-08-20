@@ -29,17 +29,17 @@ export const VerificationEmailTemplate = ({
   return (
     <Html>
       <Head />
-      <Preview>Seu código de verificação Courtesyfy: {code}</Preview>
+      <Preview>Seu código de verificação Karollyne Morais: {code}</Preview>
       <Body style={main}>
         <Container style={container}>
           {/* Header com gradiente */}
           <Section style={header}>
-            <Heading style={headerTitle}>🎫 Courtesyfy</Heading>
+            <Heading style={headerTitle}>🎫 Karollyne Morais</Heading>
           </Section>
 
           {/* Conteúdo */}
           <Section style={content}>
-            <Heading style={title}>Bem-vindo ao Courtesyfy!</Heading>
+            <Heading style={title}>Bem-vindo ao Karollyne Morais!</Heading>
             
             <Text style={paragraph}>
               Obrigado por se cadastrar. Para ativar sua conta, use o código de verificação abaixo:
@@ -66,7 +66,7 @@ export const VerificationEmailTemplate = ({
           {/* Footer */}
           <Section style={footer}>
             <Text style={footerText}>
-              © {new Date().getFullYear()} Courtesyfy. Todos os direitos reservados.
+              © {new Date().getFullYear()} Karollyne Morais. Todos os direitos reservados.
             </Text>
           </Section>
         </Container>

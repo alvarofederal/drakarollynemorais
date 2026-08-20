@@ -1,46 +1,43 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-const CANONICAL_HOST = "courtesyfy.com.br"
+/**
+ * Primeira barreira de acesso: só confere a presença do cookie de sessão.
+ * NÃO decide papel nem valida o token — isso é feito no servidor, em cada
+ * página, com `auth()`. Middleware roda no Edge e não fala com o Prisma.
+ */
+
+const ROTAS_PUBLICAS = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  "/auth",
+  "/cursos",
+  "/professores",
+  "/certificados",
+  "/termos-de-uso",
+  "/politica-de-privacidade",
+]
 
 export function middleware(request: NextRequest) {
-  // ✅ Redireciona o domínio Vercel para o domínio canônico em produção
-  // Evita que o usuário fique preso em courtesyfy.vercel.app
-  const host = request.headers.get("host") ?? ""
-  if (host.includes("vercel.app") && process.env.NODE_ENV === "production") {
-    const url = request.nextUrl.clone()
-    url.protocol = "https:"
-    url.host = CANONICAL_HOST
-    return NextResponse.redirect(url, { status: 301 })
-  }
-
   const { pathname } = request.nextUrl
 
-  const publicRoutes = [
-    "/login",
-    "/register",
-    "/verify-email",
-    "/forgot-password",
-    "/reset-password",
-    "/auth",
-    "/c/",          // landing page pública das chaves
-  ]
+  const ehPublica =
+    pathname === "/" || ROTAS_PUBLICAS.some((rota) => pathname.startsWith(rota))
 
-  const isPublicRoute =
-    pathname === "/" ||
-    publicRoutes.some(route => pathname.startsWith(route))
+  if (ehPublica) return NextResponse.next()
 
-  if (isPublicRoute) {
-    return NextResponse.next()
-  }
-
-  // Verifica apenas cookie — sem Prisma no middleware
-  const sessionToken =
+  const cookieSessao =
     request.cookies.get("authjs.session-token")?.value ||
     request.cookies.get("__Secure-authjs.session-token")?.value
 
-  if (!sessionToken) {
-    return NextResponse.redirect(new URL("/login", request.url))
+  if (!cookieSessao) {
+    const url = new URL("/login", request.url)
+    // Preserva o destino para voltar depois do login
+    url.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(url)
   }
 
   return NextResponse.next()

@@ -4,11 +4,11 @@
 Todo campo de relação precisa de `@@index`. Integridade referencial e cascata são
 responsabilidade da aplicação.
 
-> ⚠️ O schema atual (`prisma/schema.prisma`) ainda é o do **Courtesyfy**.
-> A reescrita para o modelo abaixo é a primeira tarefa do Release 0.
+> ✅ Schema aplicado em `u937845481_plat_curso_db` via `prisma db push`.
+> Ainda **sem migrations versionadas** — ver `development/bugs.md`.
 > Modelo completo e comentado: [`spec.md`](../spec.md) → Parte 8.
 
-## Modelos planejados
+## Modelos (21 tabelas, criadas em 2026-08-20)
 
 ### Autenticação (reaproveitado)
 `User` · `Account` · `Session` · `VerificationToken` · `AuthToken` · `LoginAttempt`
@@ -16,7 +16,7 @@ responsabilidade da aplicação.
 Mudanças no `User`:
 - **sai** `lojaId`
 - **entra** `cpf` (único, opcional — necessário para o certificado), `telefone`
-- `role` passa a ser `ADMIN | EQUIPE | ALUNO`, padrão `ALUNO`
+- `role` passa a ser `ADMIN | ALUNO`, padrão `ALUNO`
 
 ### Conteúdo
 `Professor` · `Categoria` · `Curso` · `Modulo` · `Aula` · `Material`
@@ -34,7 +34,7 @@ Mudanças no `User`:
 
 | Enum | Valores |
 |---|---|
-| `Role` | `ADMIN` `EQUIPE` `ALUNO` |
+| `Role` | `ADMIN` `ALUNO` |
 | `StatusCurso` | `RASCUNHO` `PUBLICADO` `ARQUIVADO` |
 | `NivelCurso` | `INTRODUTORIO` `INTERMEDIARIO` `AVANCADO` |
 | `TipoAcesso` | `VITALICIO` `PRAZO_DIAS` |

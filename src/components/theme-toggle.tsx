@@ -2,46 +2,46 @@
 
 import { useEffect, useState } from "react"
 import { Moon, Sun } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-const STORAGE_KEY = "cfy-theme"
+const STORAGE_KEY = "km-theme"
 
-export function ThemeToggle() {
-  const [isDark, setIsDark] = useState(true)   // padrão escuro
-  const [mounted, setMounted] = useState(false)
+/**
+ * Seletor de tema. O padrão da plataforma é escuro — ver o script em
+ * `src/app/layout.tsx`, que aplica a classe `.dark` antes da hidratação.
+ */
+export function ThemeToggle({ className }: { className?: string }) {
+  const [escuro, setEscuro] = useState(true)
+  const [montado, setMontado] = useState(false)
 
   useEffect(() => {
-    // Lê o estado real do DOM após montar no cliente
-    setIsDark(document.documentElement.classList.contains("dark"))
-    setMounted(true)
+    // Lê o estado real do DOM, já definido pelo script do <head>
+    setEscuro(document.documentElement.classList.contains("dark"))
+    setMontado(true)
   }, [])
 
-  function toggle() {
-    const next = !isDark
-    setIsDark(next)
-
-    if (next) {
-      document.documentElement.classList.add("dark")
-      localStorage.setItem(STORAGE_KEY, "dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-      localStorage.setItem(STORAGE_KEY, "light")
-    }
+  function alternar() {
+    const proximo = !escuro
+    setEscuro(proximo)
+    document.documentElement.classList.toggle("dark", proximo)
+    localStorage.setItem(STORAGE_KEY, proximo ? "dark" : "light")
   }
 
-  // Placeholder com mesmo tamanho para evitar layout shift
-  if (!mounted) return <div className="w-9 h-9" />
+  // Espaço reservado do mesmo tamanho, para não deslocar o layout
+  if (!montado) return <div className={cn("size-9", className)} aria-hidden />
 
   return (
     <button
-      onClick={toggle}
-      className="p-2 rounded-lg transition-colors text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10"
-      aria-label={isDark ? "Mudar para modo claro" : "Mudar para modo escuro"}
-      title={isDark ? "Modo claro" : "Modo escuro"}
+      type="button"
+      onClick={alternar}
+      className={cn(
+        "inline-flex size-9 items-center justify-center rounded-md text-km-ink-soft transition-colors hover:bg-km-sunk hover:text-km-ink",
+        className
+      )}
+      aria-label={escuro ? "Mudar para tema claro" : "Mudar para tema escuro"}
+      title={escuro ? "Tema claro" : "Tema escuro"}
     >
-      {isDark
-        ? <Sun  className="w-5 h-5" />
-        : <Moon className="w-5 h-5" />
-      }
+      {escuro ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
     </button>
   )
 }

@@ -35,7 +35,7 @@ Curso → Módulo → Aula → Material (slide, PDF, planilha)
 | Papel | Quem é | Pode |
 |---|---|---|
 | `ADMIN` | Dra. Karollyne | Tudo: conteúdo, alunos, matrículas, pedidos, configurações |
-| `EQUIPE` | Editor/secretária (futuro) | Conteúdo, sem acesso a faturamento |
+| `EQUIPE` | Editor/secretária | **Não implementado.** Fica para quando ela precisar delegar |
 | `ALUNO` | Quem comprou ou recebeu cortesia | Cursos com matrícula ativa |
 | *(visitante)* | Não autenticado | Landing, catálogo, aulas gratuitas, validação de certificado |
 

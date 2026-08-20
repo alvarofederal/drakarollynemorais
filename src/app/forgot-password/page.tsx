@@ -1,33 +1,39 @@
-// src/app/forgot-password/page.tsx
+import type { Metadata } from "next"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle } from "lucide-react"
+import { AuthShell } from "@/app/_components/auth/auth-shell"
+
+export const metadata: Metadata = {
+  title: "Recuperar senha",
+  robots: { index: false, follow: false },
+}
 
 export default function ForgotPasswordPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-6 w-6 text-amber-600" />
-            Em Desenvolvimento
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600 mb-4">
-            A funcionalidade de recuperação de senha estará disponível em breve.
-          </p>
-          <p className="text-sm text-gray-500 mb-6">
-            Por enquanto, entre em contato com o suporte se precisar redefinir sua senha.
-          </p>
-          <Link 
-            href="/login"
-            className="inline-block w-full text-center py-3 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-          >
-            Voltar para o Login
+    <AuthShell
+      titulo="Recuperar senha"
+      subtitulo="Ainda estamos construindo esta parte."
+      rodape={
+        <>
+          Lembrou a senha?{" "}
+          <Link href="/login" className="font-medium text-km-brand hover:underline">
+            Entrar
           </Link>
-        </CardContent>
-      </Card>
-    </div>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <p className="text-sm leading-relaxed text-km-ink-soft">
+          A redefinição de senha por e-mail entra junto com os e-mails transacionais, no
+          Release 2. Até lá, se você perdeu o acesso, fale com a gente pelo canal de contato
+          e sua senha é redefinida manualmente.
+        </p>
+        <Link
+          href="/login"
+          className="inline-flex w-full items-center justify-center rounded-md border border-km-line bg-km-bg px-4 py-3 text-sm font-medium text-km-ink transition-colors hover:border-km-brand hover:text-km-brand"
+        >
+          Voltar para o login
+        </Link>
+      </div>
+    </AuthShell>
   )
 }

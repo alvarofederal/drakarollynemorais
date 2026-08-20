@@ -4,17 +4,19 @@ import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import prisma from "@/lib/prisma"
 import { registerSchema } from "@/lib/validators/auth"
-import { sendVerificationEmail } from "@/lib/email"
 import { checkRateLimit } from "@/lib/rate-limit"
+
+const CUSTO_BCRYPT = 12
 
 export async function POST(request: NextRequest) {
   try {
     const ip =
-      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       request.headers.get("x-real-ip") ||
-      "unknown"
+      "desconhecido"
 
-    const { allowed } = await checkRateLimit(`register:${ip}`, 3, 60 * 60 * 1000)
+    // 5 cadastros por IP por hora — trava criação de contas em massa
+    const { allowed } = await checkRateLimit(`register:${ip}`, 5, 60 * 60 * 1000)
     if (!allowed) {
       return NextResponse.json(
         { error: "Muitas tentativas. Tente novamente em 1 hora." },
@@ -22,79 +24,56 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const validation = registerSchema.safeParse(body)
-
-    if (!validation.success) {
+    const validacao = registerSchema.safeParse(await request.json())
+    if (!validacao.success) {
       return NextResponse.json(
-        { error: validation.error.errors[0].message },
+        { error: validacao.error.errors[0].message },
         { status: 400 }
       )
     }
 
-    const { email, password } = validation.data
+    const { name, email, password } = validacao.data
 
-    const existingUser = await prisma.user.findUnique({ where: { email } })
+    const jaExiste = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    })
 
-    if (existingUser) {
+    if (jaExiste) {
       return NextResponse.json(
-        { error: "Este email já está cadastrado" },
-        { status: 400 }
+        { error: "Este e-mail já está cadastrado. Tente entrar." },
+        { status: 409 }
       )
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12)
-    const isDev = process.env.NODE_ENV === "development"
+    const senhaHash = await bcrypt.hash(password, CUSTO_BCRYPT)
 
+    // Todo cadastro público nasce ALUNO. Promover a ADMIN é ação manual,
+    // feita pelo seed ou pelo painel — nunca por dado vindo do cliente.
     const user = await prisma.user.create({
       data: {
+        name,
         email,
-        password: hashedPassword,
-        // Em dev, pula verificação de email automaticamente
-        emailVerified: isDev ? new Date() : null,
+        password: senhaHash,
+        role: "ALUNO",
       },
+      select: { id: true, email: true, name: true },
     })
 
-    if (isDev) {
-      console.log(`\n🚀 [DEV] Conta criada e verificada automaticamente: ${email}\n`)
-      return NextResponse.json(
-        { success: true, message: "Conta criada!", userId: user.id, devAutoVerified: true },
-        { status: 201 }
-      )
-    }
-
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date()
-    expiresAt.setMinutes(expiresAt.getMinutes() + 15)
-
-    await prisma.authToken.create({
-      data: {
-        userId: user.id,
-        token: verificationCode,
-        type: "EMAIL_VERIFICATION",
-        expiresAt,
-      },
-    })
-
-    try {
-      await sendVerificationEmail(email, verificationCode, 15)
-    } catch (emailError) {
-      console.error("Erro ao enviar email:", emailError)
-    }
+    await prisma.logEvento
+      .create({ data: { userId: user.id, tipo: "CADASTRO", ip } })
+      .catch(() => {
+        /* auditoria nunca bloqueia o cadastro */
+      })
 
     return NextResponse.json(
-      {
-        success: true,
-        message: "Conta criada! Verifique seu email.",
-        userId: user.id,
-        expiresAt: expiresAt.toISOString(),
-      },
+      { success: true, message: "Conta criada com sucesso.", userId: user.id },
       { status: 201 }
     )
   } catch (error) {
-    console.error("Erro no registro:", error)
+    console.error("Erro no cadastro:", error)
     return NextResponse.json(
-      { error: "Erro ao criar conta. Tente novamente." },
+      { error: "Não foi possível criar a conta. Tente novamente." },
       { status: 500 }
     )
   }

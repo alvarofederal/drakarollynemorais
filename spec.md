@@ -156,7 +156,7 @@ Aluno paga → webhook falha → aluno reclama no WhatsApp
 | Papel | Quem é | Pode |
 |---|---|---|
 | `ADMIN` | Dra. Karollyne | Tudo: cursos, aulas, materiais, alunos, matrículas, cupons, pedidos, configurações |
-| `EQUIPE` | Secretária/editor (futuro) | Criar e editar conteúdo; **não** vê faturamento nem dados de pagamento |
+| `EQUIPE` | Secretária/editor | **Não implementado.** Só entra quando ela precisar delegar produção de conteúdo |
 | `ALUNO` | Quem comprou ou recebeu cortesia | Vê apenas os cursos em que tem matrícula **ATIVA** |
 | *(visitante)* | Não autenticado | Landing, catálogo, página de curso, aulas gratuitas, validação de certificado |
 
@@ -431,7 +431,7 @@ portanto **todo relacionamento precisa de `@@index` explícito**.
 `User` · `Account` · `Session` · `VerificationToken` · `AuthToken` · `LoginAttempt`
 
 O `User` muda: sai `lojaId`, entra `cpf`, `telefone`, e o enum `Role` passa a ser
-`ADMIN | EQUIPE | ALUNO` com padrão `ALUNO`.
+`ADMIN | ALUNO` com padrão `ALUNO` — dois papéis, conforme decidido.
 
 ### 8.2 Conteúdo
 
@@ -910,7 +910,7 @@ CLOUDFLARE_ACCOUNT_ID=
 CLOUDFLARE_STREAM_TOKEN=
 CLOUDFLARE_STREAM_KEY_ID=
 CLOUDFLARE_STREAM_KEY_JWK=
-NEXT_PUBLIC_CLOUDFLARE_CUSTOMER_CODE=
+NEXT_PUBLIC_CLOUDFLARE_STREAM_SUBDOMAIN=
 
 # Cloudflare R2 (materiais privados)
 R2_ACCOUNT_ID=

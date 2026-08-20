@@ -38,12 +38,17 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               // Fontes
               "font-src 'self' https://fonts.gstatic.com",
-              // Imagens: próprios + Cloudinary + Google avatars + GitHub avatars + data URIs (QR Code)
-              "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
-              // Frames: Stripe (checkout embutido)
-              "frame-src https://js.stripe.com https://hooks.stripe.com",
-              // Conexões de API: próprios + Stripe + Cloudinary + Resend
-              "connect-src 'self' https://api.stripe.com https://api.cloudinary.com https://api.resend.com",
+              // Imagens: próprios + Cloudinary + avatares + thumbnails do Stream + data URIs
+              "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com https://*.cloudflarestream.com",
+              // Frames: Stripe (checkout) + player do Cloudflare Stream (iframe)
+              "frame-src https://js.stripe.com https://hooks.stripe.com https://*.cloudflarestream.com",
+              // Vídeo: o player do Stream serve HLS a partir do subdomínio do cliente
+              "media-src 'self' blob: https://*.cloudflarestream.com",
+              // Conexões de API:
+              //   upload.cloudflarestream.com → envio do vídeo direto do navegador
+              //   *.cloudflarestream.com      → manifesto HLS e segmentos
+              //   *.r2.cloudflarestorage.com  → download de material (PDF/slides) via URL assinada
+              "connect-src 'self' https://api.stripe.com https://api.cloudinary.com https://api.resend.com https://upload.cloudflarestream.com https://*.cloudflarestream.com https://*.r2.cloudflarestorage.com",
               // Bloqueia tudo que não se enquadrar acima
               "base-uri 'self'",
               "form-action 'self'",

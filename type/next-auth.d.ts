@@ -1,31 +1,25 @@
-import {DefaultSession} from "next-auth"
+import type { DefaultSession } from "next-auth"
 
 declare module "next-auth" {
-    interface Session {
-        user: User & DefaultSession["user"]
-    }
+  interface Session {
+    user: {
+      id: string
+      role: "ADMIN" | "ALUNO"
+    } & DefaultSession["user"]
+  }
 
-    interface User {
-        id: string
-        name: string | null
-        urlNameProfessional: string | null
-        email: string | null
-        emailVerified: null | string | boolean
-        image: string | null
-        stripeCustomerId: string | null
-        times: string[]
-        address: string[]
-        phone: string | null
-        status: boolean
-        role: string | null
-        typeProfile: string | null
-        createdAt: string | null
-        updatedAt: string | null
-    }
+  interface User {
+    role?: "ADMIN" | "ALUNO"
+  }
 }
 
 declare module "next-auth/jwt" {
-    interface JWT {
-        role?: string
-    }
+  interface JWT {
+    id?: string
+    role?: "ADMIN" | "ALUNO"
+    /** Momento da última revalidação do papel/status contra o banco (epoch ms) */
+    checkedAt?: number
+  }
 }
+
+export {}

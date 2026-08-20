@@ -1,80 +1,34 @@
-import { auth } from "@/lib/auth"
-import { redirect } from "next/navigation"
-import { RegisterForm } from "./_components/register-form"
+import type { Metadata } from "next"
 import Link from "next/link"
+import { redirect } from "next/navigation"
+import { auth } from "@/lib/auth"
+import { AuthShell } from "@/app/_components/auth/auth-shell"
+import { RegisterForm } from "./_components/register-form"
+
+export const metadata: Metadata = {
+  title: "Criar conta",
+  description: "Crie sua conta e comece a estudar.",
+  robots: { index: false, follow: false },
+}
 
 export default async function RegisterPage() {
   const session = await auth()
-  if (session?.user) redirect("/dashboard")
+  if (session?.user) redirect("/apos-login")
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
-      style={{ background: "#050505" }}
-    >
-      {/* Grid background */}
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
-      {/* Ambient orb */}
-      <div
-        aria-hidden="true"
-        className="fixed pointer-events-none"
-        style={{
-          width: "600px",
-          height: "600px",
-          top: "-200px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          background: "radial-gradient(circle, rgba(16,185,129,0.12), transparent 65%)",
-          borderRadius: "50%",
-        }}
-      />
-
-      {/* Card */}
-      <div
-        className="relative w-full max-w-md rounded-3xl p-8 z-10"
-        style={{
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          boxShadow: "0 32px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)",
-          backdropFilter: "blur(24px)",
-        }}
-      >
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link href="/">
-            <span
-              className="logo-shine font-bold tracking-tight select-none"
-              style={{
-                fontFamily: "var(--font-open-sans), 'Open Sans', sans-serif",
-                fontSize: "28px",
-              }}
-            >
-              <span style={{ color: "#ffffff" }}>Courtesy</span>
-              <span className="logo-fy-pulse" style={{ color: "#10b981" }}>fy</span>
-            </span>
-          </Link>
-          <p className="text-sm mt-3" style={{ color: "rgba(255,255,255,0.40)" }}>
-            Crie sua conta grátis
-          </p>
-        </div>
-
-        <RegisterForm />
-
-        <p className="text-center text-xs mt-6" style={{ color: "rgba(255,255,255,0.20)" }}>
-          Já tem uma conta?{" "}
-          <Link href="/login" className="font-semibold transition-colors hover:text-white" style={{ color: "#10b981" }}>
+    <AuthShell
+      titulo="Criar sua conta"
+      subtitulo="Leva menos de um minuto."
+      rodape={
+        <>
+          Já tem conta?{" "}
+          <Link href="/login" className="font-medium text-km-brand hover:underline">
             Entrar
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <RegisterForm />
+    </AuthShell>
   )
 }

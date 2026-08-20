@@ -1,4 +1,13 @@
 // prisma/schema.prisma
+//
+// Plataforma de Cursos — Dra. Karollyne Morais
+//
+// relationMode = "prisma": o MySQL NÃO cria foreign keys. Consequências:
+//   1. TODO campo de relação precisa de @@index explícito
+//   2. deleção em cascata é responsabilidade da aplicação
+//   3. integridade referencial é responsabilidade da aplicação
+//
+// Documentação do modelo: spec.md → Parte 8
 
 generator client {
   provider        = "prisma-client-js"
@@ -13,8 +22,21 @@ datasource db {
 }
 
 // ─────────────────────────────────────────
-// AUTH
+// AUTENTICAÇÃO
 // ─────────────────────────────────────────
+
+/// Dois papéis, conforme definido com a Dra.:
+/// ADMIN — ela. Sobe material, gerencia cursos, alunos e a plataforma inteira.
+/// ALUNO — quem consome os cursos.
+enum Role {
+  ADMIN
+  ALUNO
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
 
 model User {
   id            String    @id @default(cuid())
@@ -23,27 +45,30 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-  role          Role      @default(LOJISTA)
-  ativo         Boolean   @default(true)
-  ultimoAcesso  DateTime?
-  lojaId        String?
+  role          Role      @default(ALUNO)
 
-  loja          Loja?       @relation(fields: [lojaId], references: [id])
-  accounts      Account[]
-  sessions      Session[]
-  authTokens    AuthToken[]
-  resgates      Resgate[]
-  logsEventos   LogEvento[]
-  chavesCancel           Chave[]                @relation("CanceladoPor")
-  campanhasCria          Campanha[]             @relation("CriadoPor")
-  lotesGerados           LoteChave[]            @relation("GeradoPor")
-  impressoesAprovadas    SolicitacaoImpressao[] @relation("ImpressaoAprovacao")
-  pagamentosConfirmados  SolicitacaoImpressao[] @relation("ImpressaoPagamento")
+  /// Necessário para emitir o certificado. Opcional no cadastro,
+  /// exigido antes da emissão.
+  cpf      String? @unique @db.VarChar(14)
+  telefone String? @db.VarChar(20)
+
+  ativo        Boolean   @default(true)
+  ultimoAcesso DateTime?
+
+  accounts   Account[]
+  sessions   Session[]
+  authTokens AuthToken[]
+
+  matriculas   Matricula[]
+  progressos   ProgressoAula[]
+  certificados Certificado[]
+  pedidos      Pedido[]
+  logsEventos  LogEvento[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@index([lojaId])
+  @@index([role])
   @@map("users")
 }
 
@@ -69,6 +94,8 @@ model Account {
   @@map("accounts")
 }
 
+/// Mantida por compatibilidade com o PrismaAdapter.
+/// A sessão da aplicação é JWT — esta tabela não é escrita no fluxo normal.
 model Session {
   sessionToken String   @unique
   userId       String
@@ -91,10 +118,11 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+/// Tokens de verificação de e-mail e redefinição de senha.
 model AuthToken {
   id        String    @id @default(cuid())
   userId    String
-  token     String    @unique @db.VarChar(500)
+  token     String    @unique @db.VarChar(191)
   type      TokenType
   expiresAt DateTime
   used      Boolean   @default(false)
@@ -108,6 +136,7 @@ model AuthToken {
   @@map("auth_tokens")
 }
 
+/// Base do bloqueio por tentativas de login (ver lib/rate-limit.ts).
 model LoginAttempt {
   id        String   @id @default(cuid())
   email     String
@@ -122,450 +151,469 @@ model LoginAttempt {
 }
 
 // ─────────────────────────────────────────
-// DOMÍNIO COURTESYFY
+// CONTEÚDO
 // ─────────────────────────────────────────
 
-model Loja {
-  id           String     @id @default(cuid())
-  nome         String
-  razaoSocial  String?
-  cnpjCpf      String?    @unique
-  email        String     @unique
-  telefone     String?
-  logradouro   String?
-  numero       String?
-  complemento  String?
-  bairro       String?
-  cidade       String?
-  estado       String?    @db.Char(2)
-  cep          String?
-  logoUrl      String?    @db.Text
-  corPrimaria  String     @default("#c8a96e")
-  nomeExibicao String?
-  siteUrl      String?    @db.Text
-  status       LojaStatus @default(ATIVA)
-  plano        Plano      @default(ESSENCIAL)
-
-  stripeCustomerId       String?   @unique
-  stripeSubscriptionId   String?   @unique
-  stripePriceId          String?
-  stripeCurrentPeriodEnd DateTime?
-
-  // Impressão: PROPRIO = lojista imprime sozinho | ADMIN_COURTESYFY = solicita ao admin
-  tipoImpressao TipoImpressao @default(PROPRIO)
-
-  // Totem de resgate público
-  totemLayoutId  String?
-  totemTitulo    String?  @db.VarChar(100)
-  totemSubtitulo String?  @db.VarChar(200)
-  totemLayout    Layout?  @relation("LojaTotemLayout", fields: [totemLayoutId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  usuarios               User[]
-  campanhas              Campanha[]
-  lotes                  LoteChave[]
-  chaves                 Chave[]
-  resgates               Resgate[]
-  logsEventos            LogEvento[]
-  layouts                Layout[]
-  solicitacoesImpressao  SolicitacaoImpressao[]
-
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  @@index([totemLayoutId])
-  @@map("lojas")
-}
-
-model Layout {
-  id             String      @id @default(cuid())
-  lojaId         String
-  nome           String
-  corPrimaria    String      @default("#c8a96e")
-  corFundo       String      @default("#fffdf7")
-  corTexto       String      @default("#3a2510")
-  corSecundaria  String      @default("#5a3e28")
-  imagem1Url     String?     @db.Text
-  imagem2Url     String?     @db.Text
-  imagem3Url     String?     @db.Text
-  opacidadeFundo Int         @default(20)
-  brilho         Int         @default(100)
-  saturacao      Int         @default(100)
-  contraste      Int         @default(100)
-  tamanhoCard    TamanhoCard @default(PADRAO)
-  estiloCard     EstiloCard  @default(CLASSICO)
-  raioCantos     Int         @default(8)
-  padrao         Boolean     @default(false)
-  posicaoChaveX  Float?
-  posicaoChaveY  Float?
-  escalaChave    Float       @default(1)
-
-  loja                  Loja                   @relation(fields: [lojaId], references: [id])
-  campanhas             Campanha[]
-  solicitacoesImpressao SolicitacaoImpressao[]
-  lojasTotem            Loja[]                 @relation("LojaTotemLayout")
-
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  @@index([lojaId])
-  @@map("layouts")
-}
-
-model Campanha {
-  id               String         @id @default(cuid())
-  lojaId           String
-  layoutId         String?
-  nome             String
-  descricao        String?        @db.Text
-  tipoBeneficio    TipoBeneficio
-  valorBeneficio   Decimal?       @db.Decimal(10, 2)
-  descricaoPremio  String?        @db.Text
-  regrasUso        String?        @db.Text
-  quantidadeChaves Int
-  inicioEm         DateTime
-  expiraEm         DateTime
-  status           CampanhaStatus @default(RASCUNHO)
-  landingPageSlug  String?        @unique
-  criadoPorId      String?
-
-  loja                  Loja                   @relation(fields: [lojaId], references: [id])
-  layout                Layout?                @relation(fields: [layoutId], references: [id])
-  criadoPor             User?                  @relation("CriadoPor", fields: [criadoPorId], references: [id])
-  lotes                 LoteChave[]
-  chaves                Chave[]
-  resgates              Resgate[]
-  logsEventos           LogEvento[]
-  solicitacoesImpressao SolicitacaoImpressao[]
-
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  @@index([lojaId])
-  @@index([layoutId])
-  @@index([criadoPorId])
-  @@index([status])
-  @@index([expiraEm])
-  @@map("campanhas")
-}
-
-model LoteChave {
-  id           String       @id @default(cuid())
-  campanhaId   String
-  lojaId       String
-  descricao    String?
-  quantidade   Int
-  geradoPorId  String?
-  formatoSaida FormatoSaida @default(A4)
-  arquivoUrl   String?      @db.Text
-  status       LoteStatus   @default(GERADO)
-
-  campanha              Campanha               @relation(fields: [campanhaId], references: [id])
-  loja                  Loja                   @relation(fields: [lojaId], references: [id])
-  geradoPor             User?                  @relation("GeradoPor", fields: [geradoPorId], references: [id])
-  chaves                Chave[]
-  solicitacoesImpressao SolicitacaoImpressao[]
-
-  criadoEm DateTime @default(now())
-
-  @@index([campanhaId])
-  @@index([lojaId])
-  @@index([geradoPorId])
-  @@map("lotes_chaves")
-}
-
-model Chave {
-  id             String      @id @default(cuid())
-  codigo         String      @unique
-  loteId         String
-  campanhaId     String
-  lojaId         String
-  clienteId      String?
-  status         ChaveStatus @default(GERADA)
-  qrcodeUrl      String?     @db.Text
-  landingUrl     String?     @db.Text
-  ativadaEm      DateTime?
-  resgatadaEm    DateTime?
-  expiradaEm     DateTime?
-  canceladaEm    DateTime?
-  canceladoPorId String?
-
-  lote         LoteChave @relation(fields: [loteId], references: [id])
-  campanha     Campanha  @relation(fields: [campanhaId], references: [id])
-  loja         Loja      @relation(fields: [lojaId], references: [id])
-  cliente      Cliente?  @relation(fields: [clienteId], references: [id])
-  canceladoPor User?     @relation("CanceladoPor", fields: [canceladoPorId], references: [id])
-  resgate      Resgate?
-  logsEventos  LogEvento[]
-
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  @@index([loteId])
-  @@index([campanhaId])
-  @@index([lojaId])
-  @@index([clienteId])
-  @@index([canceladoPorId])
-  @@index([status])
-  @@map("chaves")
-}
-
-model Cliente {
-  id          String      @id @default(cuid())
-  telefone    String?
-  email       String?
-  nome        String?
-  documento   String?
-  ipCadastro  String?
-  canalOrigem CanalOrigem @default(WEB)
-
-  chaves      Chave[]
-  resgates    Resgate[]
-  logsEventos LogEvento[]
-
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  @@map("clientes")
-}
-
-model Resgate {
-  id                String        @id @default(cuid())
-  chaveId           String        @unique
-  campanhaId        String
-  lojaId            String
-  clienteId         String?
-  operadorId        String?
-  canal             CanalResgate  @default(BALCAO)
-  statusResgate     StatusResgate @default(CONFIRMADO)
-  beneficioEntregue String?       @db.Text
-  observacao        String?       @db.Text
-  ipOrigem          String?
-
-  chave    Chave    @relation(fields: [chaveId], references: [id])
-  campanha Campanha @relation(fields: [campanhaId], references: [id])
-  loja     Loja     @relation(fields: [lojaId], references: [id])
-  cliente  Cliente? @relation(fields: [clienteId], references: [id])
-  operador User?    @relation(fields: [operadorId], references: [id])
-
-  resgatadoEm DateTime @default(now())
-
-  @@index([campanhaId])
-  @@index([lojaId])
-  @@index([clienteId])
-  @@index([operadorId])
-  @@map("resgates")
-}
-
-model LogEvento {
-  id         String     @id @default(cuid())
-  tipoEvento TipoEvento
-  chaveId    String?
-  campanhaId String?
-  lojaId     String?
-  clienteId  String?
-  operadorId String?
-  canal      String?
-  ipOrigem   String?
-  userAgent  String?    @db.Text
-  payload    Json?
-
-  chave    Chave?    @relation(fields: [chaveId], references: [id])
-  campanha Campanha? @relation(fields: [campanhaId], references: [id])
-  loja     Loja?     @relation(fields: [lojaId], references: [id])
-  cliente  Cliente?  @relation(fields: [clienteId], references: [id])
-  operador User?     @relation(fields: [operadorId], references: [id])
-
-  criadoEm DateTime @default(now())
-
-  @@index([chaveId])
-  @@index([campanhaId])
-  @@index([lojaId])
-  @@index([clienteId])
-  @@index([operadorId])
-  @@index([tipoEvento])
-  @@index([criadoEm])
-  @@map("logs_eventos")
-}
-
-// ─────────────────────────────────────────
-// ENUMS
-// ─────────────────────────────────────────
-
-enum TokenType {
-  EMAIL_VERIFICATION
-  PASSWORD_RESET
-}
-
-enum Role {
-  SUPER_ADMIN
-  LOJISTA
-  CLIENTE
-}
-
-enum LojaStatus {
-  ATIVA
-  SUSPENSA
-  CANCELADA
-}
-
-enum Plano {
-  ESSENCIAL
-  PROFISSIONAL
-  EMPRESARIAL
-}
-
-enum TipoBeneficio {
-  DESCONTO_PERCENTUAL
-  DESCONTO_FIXO
-  BRINDE
-  SORTEIO
-  FRETE_GRATIS
-  CASHBACK
-}
-
-enum CampanhaStatus {
+enum StatusCurso {
   RASCUNHO
+  PUBLICADO
+  ARQUIVADO
+}
+
+enum NivelCurso {
+  INTRODUTORIO
+  INTERMEDIARIO
+  AVANCADO
+}
+
+enum TipoAcesso {
+  VITALICIO
+  PRAZO_DIAS
+}
+
+enum TipoAula {
+  VIDEO
+  TEXTO
+  PDF
+}
+
+enum TipoMaterial {
+  PDF
+  SLIDE
+  PLANILHA
+  LINK
+  IMAGEM
+}
+
+/// Professor convidado. É metadado exibido do curso — NÃO é usuário do sistema.
+/// A Dra. publica o conteúdo em nome dele.
+model Professor {
+  id            String  @id @default(cuid())
+  nome          String
+  slug          String  @unique
+  titulacao     String?
+  crm           String? @db.VarChar(30)
+  rqe           String? @db.VarChar(30)
+  especialidade String?
+  bio           String? @db.Text
+  fotoUrl       String?
+  instagram     String?
+
+  cursos Curso[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("professores")
+}
+
+model Categoria {
+  id    String @id @default(cuid())
+  nome  String
+  slug  String @unique
+  ordem Int    @default(0)
+
+  cursos Curso[]
+
+  @@map("categorias")
+}
+
+model Curso {
+  id        String  @id @default(cuid())
+  slug      String  @unique
+  titulo    String
+  subtitulo String?
+  descricao String? @db.Text
+
+  capaUrl         String?
+  /// UID do vídeo de apresentação no Cloudflare Stream
+  trailerVideoUid String?
+
+  professorId String?
+  categoriaId String?
+
+  nivel               NivelCurso @default(INTRODUTORIO)
+  cargaHorariaMinutos Int        @default(0)
+
+  precoCentavos   Int     @default(0)
+  /// Preço "de" — apenas para exibição de desconto
+  precoDeCentavos Int?
+  stripePriceId   String?
+
+  tipoAcesso TipoAcesso @default(VITALICIO)
+  /// Dias de acesso quando tipoAcesso = PRAZO_DIAS
+  acessoDias Int?
+
+  status      StatusCurso @default(RASCUNHO)
+  publicadoEm DateTime?
+
+  emiteCertificado          Boolean @default(true)
+  percentualParaCertificado Int     @default(100)
+
+  destaque Boolean @default(false)
+  ordem    Int     @default(0)
+
+  professor Professor? @relation(fields: [professorId], references: [id])
+  categoria Categoria? @relation(fields: [categoriaId], references: [id])
+
+  modulos      Modulo[]
+  materiais    Material[]
+  matriculas   Matricula[]
+  pedidos      Pedido[]
+  certificados Certificado[]
+  depoimentos  Depoimento[]
+  faqs         Faq[]
+  cupons       Cupom[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([professorId])
+  @@index([categoriaId])
+  @@index([status])
+  @@map("cursos")
+}
+
+model Modulo {
+  id        String  @id @default(cuid())
+  cursoId   String
+  titulo    String
+  descricao String? @db.Text
+  ordem     Int     @default(0)
+
+  /// Liberação programada (drip content) — v1.1
+  liberacaoDias Int?
+
+  curso Curso  @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  aulas Aula[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([cursoId])
+  @@map("modulos")
+}
+
+model Aula {
+  id        String  @id @default(cuid())
+  moduloId  String
+  slug      String
+  titulo    String
+  descricao String? @db.Text
+
+  tipo TipoAula @default(VIDEO)
+
+  /// UID do vídeo no Cloudflare Stream. Nulo até o upload terminar.
+  videoUid        String?
+  /// Preenchido pelo webhook do Stream quando o vídeo fica pronto
+  duracaoSegundos Int?
+  videoPronto     Boolean @default(false)
+
+  ordem Int @default(0)
+
+  /// Aula de amostra: única exceção ao portão de matrícula
+  gratuita  Boolean @default(false)
+  publicada Boolean @default(false)
+
+  modulo     Modulo          @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  materiais  Material[]
+  progressos ProgressoAula[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([moduloId, slug])
+  @@index([moduloId])
+  @@map("aulas")
+}
+
+/// Material de apoio. Pertence a uma aula OU ao curso inteiro.
+model Material {
+  id      String  @id @default(cuid())
+  aulaId  String?
+  cursoId String?
+
+  titulo String
+  tipo   TipoMaterial @default(PDF)
+
+  /// Chave do objeto no bucket privado (Cloudflare R2).
+  /// NUNCA exposta a usuário sem matrícula — ver lib/acesso.ts
+  arquivoKey   String
+  tamanhoBytes Int    @default(0)
+
+  downloadPermitido Boolean @default(true)
+  ordem             Int     @default(0)
+
+  aula  Aula?  @relation(fields: [aulaId], references: [id], onDelete: Cascade)
+  curso Curso? @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  criadoEm DateTime @default(now())
+
+  @@index([aulaId])
+  @@index([cursoId])
+  @@map("materiais")
+}
+
+// ─────────────────────────────────────────
+// ACESSO E PROGRESSO
+// ─────────────────────────────────────────
+
+enum OrigemMatricula {
+  COMPRA
+  CORTESIA
+  IMPORTACAO
+}
+
+enum StatusMatricula {
   ATIVA
-  PAUSADA
-  ENCERRADA
-  CANCELADA
-}
-
-enum FormatoSaida {
-  A4
-  ETIQUETA
-  ADESIVO
-  CSV
-  DIGITAL
-}
-
-enum LoteStatus {
-  GERADO
-  EXPORTADO
-  DISTRIBUIDO
-}
-
-enum ChaveStatus {
-  GERADA
-  CONSULTADA
-  ATIVADA
-  RESGATADA
   EXPIRADA
   CANCELADA
+  REEMBOLSADA
 }
 
-enum CanalOrigem {
-  WEB
-  QRCODE
-  MANUAL
-}
+/// O portão de acesso ao conteúdo. Sem matrícula ATIVA, nada é entregue.
+model Matricula {
+  id       String  @id @default(cuid())
+  userId   String
+  cursoId  String
+  pedidoId String?
 
-enum CanalResgate {
-  BALCAO
-  QRCODE
-  WEB
-  APP
-  MANUAL
-}
+  origem OrigemMatricula @default(COMPRA)
+  status StatusMatricula @default(ATIVA)
 
-enum StatusResgate {
-  CONFIRMADO
-  RECUSADO
-  ESTORNADO
-}
+  iniciadaEm  DateTime  @default(now())
+  /// Nulo = acesso vitalício
+  expiraEm    DateTime?
+  concluidaEm DateTime?
 
-// ─────────────────────────────────────────
-// SOLICITAÇÕES DE IMPRESSÃO
-// ─────────────────────────────────────────
+  percentualConcluido Int @default(0)
 
-model SolicitacaoImpressao {
-  id              String            @id @default(cuid())
-  lojaId          String
-  campanhaId      String
-  loteId          String
-  layoutId        String
-  quantidadeCards Int
-  folhasEstimadas Int
-  observacaoLoja  String?           @db.Text
-  status          StatusSolicitacao @default(PENDENTE)
-  observacaoAdmin String?           @db.Text
-  aprovadoPorId   String?
-  aprovadoEm      DateTime?
-
-  // Pagamento
-  valorCobrado             Decimal?  @db.Decimal(10, 2)
-  pixChave                 String?   @db.VarChar(150)
-  pixNome                  String?   @db.VarChar(100)
-  pagamentoConfirmadoPorId String?
-  pagamentoConfirmadoEm    DateTime?
-
-  loja                   Loja      @relation(fields: [lojaId],                    references: [id])
-  campanha               Campanha  @relation(fields: [campanhaId],                references: [id])
-  lote                   LoteChave @relation(fields: [loteId],                    references: [id])
-  layout                 Layout    @relation(fields: [layoutId],                  references: [id])
-  aprovadoPor            User?     @relation("ImpressaoAprovacao",               fields: [aprovadoPorId],            references: [id])
-  pagamentoConfirmadoPor User?     @relation("ImpressaoPagamento",               fields: [pagamentoConfirmadoPorId], references: [id])
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  curso       Curso           @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  progressos  ProgressoAula[]
+  certificado Certificado?
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@index([lojaId])
-  @@index([campanhaId])
-  @@index([loteId])
-  @@index([layoutId])
-  @@index([aprovadoPorId])
-  @@index([pagamentoConfirmadoPorId])
+  @@unique([userId, cursoId])
+  @@index([userId])
+  @@index([cursoId])
   @@index([status])
-  @@map("solicitacoes_impressao")
+  @@map("matriculas")
 }
 
-enum StatusSolicitacao {
+model ProgressoAula {
+  id          String @id @default(cuid())
+  userId      String
+  aulaId      String
+  matriculaId String
+
+  segundosAssistidos Int @default(0)
+  /// Posição para retomar de onde parou
+  ultimaPosicao      Int @default(0)
+
+  concluida   Boolean   @default(false)
+  concluidaEm DateTime?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aula      Aula      @relation(fields: [aulaId], references: [id], onDelete: Cascade)
+  matricula Matricula @relation(fields: [matriculaId], references: [id], onDelete: Cascade)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([userId, aulaId])
+  @@index([userId])
+  @@index([aulaId])
+  @@index([matriculaId])
+  @@map("progresso_aulas")
+}
+
+/// Documento imutável. Os campos de conteúdo são snapshot: mudar o curso
+/// depois NÃO altera certificados já emitidos.
+model Certificado {
+  id          String @id @default(cuid())
+  /// Código público de validação, ex.: KM-2026-A7F3C9
+  codigo      String @unique @db.VarChar(40)
+  userId      String
+  cursoId     String
+  matriculaId String @unique
+
+  nomeAluno           String
+  cpfAluno            String? @db.VarChar(14)
+  cursoTitulo         String
+  cargaHorariaMinutos Int
+
+  emitidoEm DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  curso     Curso     @relation(fields: [cursoId], references: [id])
+  matricula Matricula @relation(fields: [matriculaId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([cursoId])
+  @@map("certificados")
+}
+
+// ─────────────────────────────────────────
+// COMÉRCIO
+// ─────────────────────────────────────────
+
+enum StatusPedido {
   PENDENTE
-  EM_ANALISE
-  AGUARDANDO_PAGAMENTO
-  APROVADA
-  REJEITADA
-  IMPRESSA
-  ENTREGUE
+  PAGO
+  FALHOU
+  REEMBOLSADO
 }
 
-enum TipoImpressao {
-  PROPRIO
-  ADMIN_COURTESYFY
+enum TipoCupom {
+  PERCENTUAL
+  VALOR_FIXO
 }
 
-enum TamanhoCard {
-  MINI
-  CARTAO
-  PADRAO
-  COUPON
-  VOUCHER
-  MEIO_A4
-  MDF
+model Pedido {
+  id      String @id @default(cuid())
+  userId  String
+  cursoId String
+
+  /// Chave de idempotência do webhook do Stripe
+  stripeSessionId       String  @unique @db.VarChar(191)
+  stripePaymentIntentId String?
+
+  valorCentavos Int
+  cupomId       String?
+
+  status StatusPedido @default(PENDENTE)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  curso Curso  @relation(fields: [cursoId], references: [id])
+  cupom Cupom? @relation(fields: [cupomId], references: [id])
+
+  criadoEm DateTime  @default(now())
+  pagoEm   DateTime?
+
+  @@index([userId])
+  @@index([cursoId])
+  @@index([cupomId])
+  @@index([status])
+  @@map("pedidos")
 }
 
-enum EstiloCard {
-  CLASSICO
-  MODERNO
-  MINIMALISTA
-  GRADIENTE
-  NEON
+model Cupom {
+  id     String    @id @default(cuid())
+  codigo String    @unique @db.VarChar(60)
+  tipo   TipoCupom @default(PERCENTUAL)
+  valor  Int
+
+  /// Nulo = vale para qualquer curso
+  cursoId     String?
+  usosMaximos Int?
+  usosAtuais  Int       @default(0)
+  validoAte   DateTime?
+  ativo       Boolean   @default(true)
+
+  curso   Curso?   @relation(fields: [cursoId], references: [id])
+  pedidos Pedido[]
+
+  criadoEm DateTime @default(now())
+
+  @@index([cursoId])
+  @@map("cupons")
+}
+
+// ─────────────────────────────────────────
+// MARKETING E OPERAÇÃO
+// ─────────────────────────────────────────
+
+/// Depoimento de ALUNO sobre o curso.
+/// ⚠️ Nunca depoimento de paciente sobre tratamento — vedado pelo CFM.
+model Depoimento {
+  id      String  @id @default(cuid())
+  cursoId String?
+
+  nome    String
+  cargo   String?
+  fotoUrl String?
+  texto   String  @db.Text
+  nota    Int?
+
+  aprovado Boolean @default(false)
+  ordem    Int     @default(0)
+
+  curso Curso? @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  criadoEm DateTime @default(now())
+
+  @@index([cursoId])
+  @@map("depoimentos")
+}
+
+model Faq {
+  id      String  @id @default(cuid())
+  cursoId String?
+
+  pergunta String
+  resposta String @db.Text
+  ordem    Int    @default(0)
+
+  curso Curso? @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  @@index([cursoId])
+  @@map("faqs")
+}
+
+/// Registro único (singleton) com a marca e os textos editáveis da plataforma.
+model ConfigPlataforma {
+  id String @id @default("default")
+
+  nomeMarca   String  @default("Dra. Karollyne Morais")
+  logoUrl     String?
+  corPrimaria String? @db.VarChar(20)
+
+  whatsapp     String?
+  instagram    String?
+  emailContato String?
+  razaoSocial  String?
+  cnpj         String? @db.VarChar(20)
+
+  /// Textos da landing sobrescritos pelo painel
+  textosLanding Json?
+
+  atualizadoEm DateTime @updatedAt
+
+  @@map("config_plataforma")
 }
 
 enum TipoEvento {
-  CHAVE_GERADA
-  CHAVE_CONSULTADA
-  CHAVE_ATIVADA
-  CHAVE_RESGATADA
-  CHAVE_EXPIRADA
-  CHAVE_CANCELADA
-  TENTATIVA_INVALIDA
-  TENTATIVA_REUSO
-  RESGATE_RECUSADO
-  CAMPANHA_CRIADA
-  CAMPANHA_ENCERRADA
-  LOTE_GERADO
-  LOTE_EXPORTADO
-  USUARIO_LOGIN
-  USUARIO_LOGOUT
+  MATRICULA_CRIADA
+  MATRICULA_REVOGADA
+  PAGAMENTO_APROVADO
+  PAGAMENTO_REEMBOLSADO
+  CURSO_PUBLICADO
+  AULA_PUBLICADA
+  CERTIFICADO_EMITIDO
+  LOGIN
+  CADASTRO
+}
+
+/// Trilha de auditoria. Registro imutável de cada ação relevante.
+model LogEvento {
+  id     String     @id @default(cuid())
+  userId String?
+  tipo   TipoEvento
+
+  entidade   String?
+  entidadeId String?
+  metadata   Json?
+  ip         String? @db.VarChar(45)
+
+  user User? @relation(fields: [userId], references: [id])
+
+  criadoEm DateTime @default(now())
+
+  @@index([userId])
+  @@index([tipo])
+  @@index([criadoEm])
+  @@map("logs_eventos")
 }
