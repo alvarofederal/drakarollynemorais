@@ -114,31 +114,38 @@
   --km-gold-soft: #f6eee3;
 }
 
-/* ── Tema ESCURO (padrão da plataforma) ── */
+/* ── Tema ESCURO (padrão da plataforma) ──
+   Preto neutro, levemente frio. O verde saiu do fundo e virou acento: só
+   aparece onde significa alguma coisa — progresso, aula gratuita, aula atual,
+   botão principal, item concluído. É isso que dá peso a ele. */
 .dark {
-  --km-bg: #070a09;
-  --km-surface: #0f1512;
-  --km-sunk: #0b100e;
+  --km-bg: #08090a;
+  --km-surface: #111214;
+  --km-sunk: #0c0d0f;
 
-  --km-ink: #e9efeb;
-  --km-ink-soft: #a3afa9;
-  --km-ink-faint: #6f7b75;
+  --km-ink: #f2f3f5;
+  --km-ink-soft: #a1a5ad;
+  /* Usado em texto de 10–11px (durações, rótulos). Mantido claro o bastante
+     para folga sobre `--km-surface`, não só sobre o fundo da página. */
+  --km-ink-faint: #888d96;
 
-  --km-line: #1e2723;
-  --km-line-soft: #161d1a;
+  --km-line: #212327;
+  --km-line-soft: #191b1e;
 
-  --km-brand: #46b394;
-  --km-brand-hover: #5cc7a8;
-  --km-brand-soft: #12211c;
-  --km-on-brand: #05100c;
+  /* Verde mais luminoso que o do tema claro: verde profundo morre em fundo
+     preto e deixa de funcionar como sinal. */
+  --km-brand: #34d399;
+  --km-brand-hover: #4ade9f;
+  --km-brand-soft: #10241c;
+  --km-on-brand: #04120c;
 
-  --km-band: #0b1512;
-  --km-band-ink: #e9efeb;
-  --km-band-ink-soft: rgba(233, 239, 235, 0.65);
-  --km-band-cta-bg: #46b394;
-  --km-band-cta-ink: #05100c;
+  --km-band: #0c0d0f;
+  --km-band-ink: #f2f3f5;
+  --km-band-ink-soft: rgba(242, 243, 245, 0.65);
+  --km-band-cta-bg: #34d399;
+  --km-band-cta-ink: #04120c;
 
-  --km-gold: #c9924b;
+  --km-gold: #d4a05a;
   --km-gold-soft: #221a10;
 }
 
