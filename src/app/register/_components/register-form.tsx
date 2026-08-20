@@ -13,6 +13,7 @@ import {
   classeBotaoSecundario,
   classeInput,
 } from "@/app/_components/auth/auth-shell"
+import { urlDaOrigem } from "@/lib/url-cliente"
 
 /** Espelha a política de `registerSchema` — feedback imediato, sem ida ao servidor. */
 function conferirSenha(senha: string) {
@@ -82,7 +83,7 @@ export function RegisterForm() {
         type="button"
         onClick={() => {
           setEntrandoGoogle(true)
-          signIn("google", { callbackUrl: "/apos-login" })
+          signIn("google", { callbackUrl: urlDaOrigem("/apos-login") })
         }}
         disabled={entrandoGoogle || enviando}
         className={classeBotaoSecundario}

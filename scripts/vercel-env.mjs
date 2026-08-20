@@ -106,23 +106,34 @@ function main() {
 
   const env = lerEnv(caminhoEnv)
 
-  // A URL pública muda entre local e produção. A Vercel injeta VERCEL_URL
-  // sozinha, mas o NextAuth precisa da URL canônica explícita.
+  // NEXTAUTH_URL fixo é armadilha: aponta para um endereço só, então quebra o
+  // logout e o login social em qualquer outro (localhost, preview, domínio
+  // novo). Com `trustHost: true` no auth.ts, o NextAuth deduz o endereço da
+  // própria requisição — o certo é a variável NÃO existir na Vercel.
+  for (const nome of ["NEXTAUTH_URL", "NEXT_PUBLIC_URL"]) {
+    for (const amb of AMBIENTES) {
+      spawnSync("npx", ["vercel", "env", "rm", nome, amb, "--yes"], {
+        stdio: "ignore",
+        shell: process.platform === "win32",
+      })
+    }
+    console.log(`  ✂  ${nome} — removida (o host vem da requisição)`)
+  }
+
+  // Esta aqui é só para os metadados (canonical, Open Graph) e é segura de fixar
   const urlProducao = process.argv[2]
   if (urlProducao) {
-    env.set("NEXTAUTH_URL", urlProducao)
-    env.set("NEXT_PUBLIC_URL", urlProducao)
     env.set("NEXT_PUBLIC_APP_URL", urlProducao)
-    console.log(`→ URL de produção: ${urlProducao}`)
+    console.log(`→ NEXT_PUBLIC_APP_URL: ${urlProducao}`)
   } else {
-    console.log("→ Sem URL informada; NEXTAUTH_URL/NEXT_PUBLIC_URL não serão alterados.")
+    console.log("→ Sem URL informada; NEXT_PUBLIC_APP_URL não será definida.")
     console.log("  Uso: node scripts/vercel-env.mjs https://seu-projeto.vercel.app")
   }
 
   const aEnviar = [
     ...NECESSARIAS,
     ...OPCIONAIS,
-    ...(urlProducao ? ["NEXTAUTH_URL", "NEXT_PUBLIC_URL", "NEXT_PUBLIC_APP_URL"] : []),
+    ...(urlProducao ? ["NEXT_PUBLIC_APP_URL"] : []),
   ]
 
   const faltando = NECESSARIAS.filter((n) => !env.has(n))
