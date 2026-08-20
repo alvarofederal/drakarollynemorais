@@ -1,173 +1,134 @@
-# Courtesyfy — Arquitetura Técnica
+# Arquitetura Técnica
 
-## Visão Geral da Arquitetura
-
-O Courtesyfy segue a arquitetura do Next.js App Router com separação clara entre camadas.
+## Visão geral
 
 ```
-Cliente (Browser)
+Cliente (browser / celular)
     ↓
-Next.js App Router (React Server Components + Client Components)
+Next.js App Router (Server Components + Client Components)
     ↓
-Server Actions / API Routes
+Server Actions  |  API Routes
     ↓
-Data Access Layer (_data_access/)
+Camada de acesso a dados (_data/)
     ↓
-Prisma ORM
-    ↓
-MySQL Database
+Prisma ORM → MySQL
+
+Fora do fluxo principal:
+  Cloudflare Stream  → vídeo (token assinado, entrega direta ao browser)
+  Cloudflare R2      → materiais (presigned URL, entrega direta ao browser)
+  Stripe             → pagamento (checkout hospedado + webhook de volta)
 ```
 
----
+**Princípio:** conteúdo pesado (vídeo, PDF) nunca trafega pelo nosso servidor. Nós só
+autorizamos e assinamos; a entrega é feita pelo Cloudflare direto ao aluno.
 
-## Estrutura de Diretórios Alvo
+## Estrutura de diretórios alvo
 
 ```
 src/
 ├── app/
-│   ├── (auth)/               # Rotas de autenticação (login, register)
-│   │   └── layout.tsx
-│   │
-│   ├── (panel)/              # Painel protegido (requer sessão)
-│   │   ├── layout.tsx
-│   │   ├── dashboard/        # Dashboard com métricas consolidadas
-│   │   ├── campanhas/        # CRUD de campanhas
-│   │   │   ├── nova/
-│   │   │   └── [id]/
-│   │   │       └── chaves/   # Chaves de uma campanha específica
-│   │   ├── chaves/           # Lista global de chaves + validação rápida
-│   │   │   └── validar/      # Tela de validação para operador
-│   │   ├── resgates/         # Histórico de resgates
-│   │   ├── loja/
-│   │   │   └── configuracoes/
-│   │   └── usuarios/         # Gestão de operadores
-│   │
-│   ├── (public)/             # Rotas públicas (sem auth)
-│   │   └── c/
-│   │       └── [codigo]/     # Landing page da chave
-│   │           └── ativar/   # Ativação pelo cliente
-│   │
-│   ├── admin/                # Super admin da plataforma
-│   │
+│   ├── (public)/                  # landing, catálogo, página de curso, legal
+│   │   ├── page.tsx               # landing
+│   │   ├── cursos/
+│   │   ├── professores/[slug]/
+│   │   └── certificados/[codigo]/
+│   ├── (auth)/                    # login, cadastro, verificação, recuperação
+│   ├── (aluno)/aluno/             # área de membros
+│   │   ├── page.tsx               # meus cursos
+│   │   ├── curso/[slug]/[aulaSlug]/
+│   │   ├── certificados/
+│   │   └── perfil/
+│   ├── (admin)/admin/             # painel da Dra.
+│   │   ├── cursos/
+│   │   ├── alunos/
+│   │   ├── pedidos/
+│   │   └── configuracoes/
 │   └── api/
-│       ├── webhook/          # Stripe webhook
-│       ├── upload/           # Cloudinary upload
-│       ├── chaves/
-│       │   └── validar/      # Validação externa (QR, PDV)
-│       └── cron/
-│           └── expirar-chaves/
-│
-├── _actions/                 # Server Actions globais (por domínio)
-│   ├── campanhas/
-│   ├── chaves/
-│   ├── clientes/
-│   ├── loja/
-│   └── usuarios/
-│
-├── _data_access/             # Queries ao banco (sem lógica de negócio)
-│   ├── campanhas/
-│   ├── chaves/
-│   ├── clientes/
-│   ├── loja/
-│   ├── resgates/
-│   └── logs/
-│
+│       ├── auth/[...nextauth]/
+│       ├── checkout/
+│       ├── webhook/stripe/
+│       ├── webhook/stream/
+│       ├── video/[aulaId]/token/
+│       ├── materiais/[id]/download/
+│       ├── upload/
+│       └── cron/expirar-matriculas/
 ├── components/
-│   ├── ui/                   # Shadcn/UI components
-│   ├── panel/                # Sidebar, header, cards do painel
-│   ├── campanhas/            # Formulários e tabelas de campanhas
-│   ├── chaves/               # Tabelas, badges de status, form de validação
-│   └── public/               # Landing page e form de ativação
-│
+│   ├── ui/                        # shadcn/ui
+│   ├── player/                    # player + marca d'água + progresso
+│   └── emails/                    # React Email
 ├── lib/
-│   ├── auth.ts               # NextAuth.js 5 config
-│   ├── prisma.ts             # Prisma singleton
-│   ├── email.ts              # Resend config
-│   ├── whatsapp.ts           # Twilio config
-│   ├── stripe.ts             # Stripe config
-│   └── qrcode.ts             # Gerador de QR Code
-│
-├── utils/
-│   ├── chave-generator.ts    # Gera código único XXXX-XXXX-XXXX-XXXX
-│   ├── permissions/          # check-plano.ts, limites-plano.ts
-│   └── export/               # gerar-pdf-lote.ts, gerar-csv-lote.ts
-│
-└── types/
-    ├── campanha.ts
-    ├── chave.ts
-    ├── cliente.ts
-    └── next-auth.d.ts
+│   ├── prisma.ts   auth.ts   stripe.ts   email.ts
+│   ├── stream.ts                  # Cloudflare Stream (upload + assinatura)
+│   ├── r2.ts                      # Cloudflare R2 (presigned URLs)
+│   ├── acesso.ts                  # verificação de matrícula — ponto único
+│   ├── certificado.ts             # geração do PDF
+│   └── validators/                # schemas Zod
+└── generated/prisma/              # client gerado
 ```
 
----
+**Convenções de colocation** (herdadas do projeto base, mantidas):
+- `_actions/` — Server Actions da rota
+- `_components/` — componentes exclusivos da rota
+- `_data/` — funções de leitura do banco
 
-## Padrões Arquiteturais
+## Padrões
 
-### 1. Data Access Layer (DAL)
-Queries Prisma ficam em `_data_access/` organizadas por domínio. Sem lógica de negócio aqui — apenas SELECT, inclui relações necessárias.
+### Ponto único de verificação de acesso
 
-### 2. Server Actions
-Toda mutação interna usa Server Actions (`_actions/`). API Routes apenas para integrações externas (Stripe webhook, Cloudinary, validação QR por PDV externo).
+Toda verificação de matrícula passa por `src/lib/acesso.ts`. Nenhuma rota implementa a
+própria checagem — isso evita que uma tela nova esqueça uma condição (expiração, reembolso).
 
-### 3. Route Groups
-- `(auth)` → login, register, sem sidebar
-- `(panel)` → rotas protegidas com sidebar do painel
-- `(public)` → landing page de chave, acessível sem login
+```typescript
+// src/lib/acesso.ts
+export async function verificarAcesso(userId: string, cursoId: string)
+export async function exigirAcesso(userId: string, cursoId: string)  // lança/redireciona
+```
 
-### 4. Autenticação
-- NextAuth.js 5 com Prisma Adapter
-- Provedores: Google, GitHub, Credentials (email/senha)
-- Middleware protege rotas via cookie (sem Prisma no middleware)
-- `User` tem `lojaId` que vincula ao tenant (loja)
+### Server Action
 
-### 5. Sistema de Permissões por Plano
-Em `src/utils/permissions/`:
-- `check-plano.ts` — verifica plano ativo da loja
-- `limites-plano.ts` — define limites por plano (campanhas, chaves/mês, etc.)
+```typescript
+"use server"
+const session = await auth()
+if (!session?.user) return { error: "Não autorizado" }
+const parsed = schema.safeParse(input)
+if (!parsed.success) return { error: "Dados inválidos" }
+// verifica papel ou matrícula → executa → registra LogEvento → revalidatePath
+```
 
-### 6. Pagamentos (Stripe)
-- Webhook em `/api/webhook` sincroniza status de assinatura da loja
-- `Loja` tem campos `stripeCustomerId`, `stripeSubscriptionId`, `stripePriceId`
-- Planos: ESSENCIAL, PROFISSIONAL, EMPRESARIAL
+### Server Component por padrão
 
-### 7. Geração de Chave Única
-- Formato: `XXXX-XXXX-XXXX-XXXX` (16 chars alfanuméricos)
-- Sem caracteres ambíguos: sem O, 0, I, 1, S, 5
-- Entropia segura (`crypto.randomBytes`)
-- Verifica duplicata no banco antes de persistir
+Client Component só quando há hook, evento, formulário ou player. A sala de aula é o
+principal caso legítimo de `"use client"`.
 
----
+### Prisma com `relationMode = "prisma"`
 
-## Banco de Dados - Grupos de Modelos
+Não há foreign key no banco. Consequências:
+- **Todo campo de relação precisa de `@@index`**
+- Deleção em cascata é responsabilidade da aplicação
+- Integridade referencial é responsabilidade da aplicação
 
-### Autenticação (manter do Basemedical)
-`User`, `Account`, `Session`, `VerificationToken`
+## Decisões arquiteturais
 
-### Domínio Courtesyfy (novos)
-`Loja`, `Campanha`, `LoteChave`, `Chave`, `Cliente`, `Resgate`, `LogEvento`
+| # | Decisão | Motivo |
+|---|---|---|
+| A1 | Upload de vídeo direto do browser para o Cloudflare | Contorna o limite de 4,5 MB de body da Vercel e não consome nossa banda |
+| A2 | Token de vídeo assinado no servidor, expiração ≤ 2h | Link copiado não funciona fora da sessão autorizada |
+| A3 | Materiais em bucket privado com presigned URL de 60s | Mesmo raciocínio do vídeo, para PDFs e slides |
+| A4 | Marca d'água como overlay HTML, não no vídeo | Permite dado por aluno sem reprocessar o vídeo |
+| A5 | Snapshot dos dados no certificado | Certificado é documento; não pode mudar retroativamente |
+| A6 | Idempotência do webhook por `stripeSessionId` único | Stripe reentrega eventos; matrícula duplicada seria bug de negócio |
+| A7 | Landing e catálogo em ISR | A vitrine continua no ar mesmo com o banco indisponível |
 
----
+Decisões relevantes ganham um ADR em `docs/adr/NNNN-titulo.md`.
 
-## Integrações Externas
+## Segurança
 
-| Serviço | Uso | Arquivo |
-|---------|-----|---------|
-| Stripe | Assinaturas da loja | `src/lib/stripe.ts` |
-| Resend | Emails transacionais | `src/lib/email.ts` |
-| Twilio | WhatsApp para chaves digitais | `src/lib/whatsapp.ts` |
-| Cloudinary | Upload de logos | `/api/upload` |
-| NextAuth | OAuth e sessões | `src/lib/auth.ts` |
-| QR Code | Geração de QR por chave | `src/lib/qrcode.ts` |
-
----
-
-## Middleware
-
-`middleware.ts` protege rotas sem consultar banco:
-- Verifica cookie de sessão NextAuth
-- Rotas públicas: `/c/[codigo]`, `/c/[codigo]/ativar`, `/api/chaves/validar`
-- Redireciona não-autenticados para `/login`
+- Headers de segurança em `next.config.ts` (CSP, X-Frame-Options, nosniff, Referrer-Policy)
+- CSP precisa liberar `cloudflarestream.com` e o domínio do R2
+- Rate limit no login e no checkout (Upstash)
+- Nenhum dado de cartão passa pela aplicação — Stripe Checkout hospedado
+- Senhas com bcrypt
 
 ---
 
-*Criado em: 2026-05-02 | Migrado de Basemedical para Courtesyfy*
+*Atualizado em: 2026-08-20*

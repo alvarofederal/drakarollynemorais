@@ -1,99 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plataforma de Cursos — Dra. Karollyne Morais
 
-## Getting Started
+Plataforma de cursos online (área de membros) para publicação e venda de conteúdo de
+formação médica: aulas em vídeo, slides e PDFs, com acompanhamento de progresso e
+certificado de conclusão.
 
-First, run the development server:
+**Status:** em construção — Release 0 (fundação) · **Versão:** 0.1.0
+
+---
+
+## Documentação
+
+| Documento | Conteúdo |
+|---|---|
+| [`spec.md`](spec.md) | **Especificação completa** — visão, requisitos, modelo de dados, arquitetura, releases, custos, riscos |
+| [`CLAUDE.md`](CLAUDE.md) | Guia para o Claude Code — regras críticas e padrões obrigatórios |
+| [`context/`](context/) | Visão do sistema, arquitetura, convenções |
+| [`planning/`](planning/) | Roadmap, backlog, histórico de versões |
+| [`knowledge/`](knowledge/) | Domínio, banco de dados, API |
+| [`development/`](development/) | Features em andamento, bugs, melhorias |
+
+---
+
+## Stack
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind 4 + shadcn/ui ·
+MySQL + Prisma 5 · NextAuth v5 · Stripe · Cloudflare Stream + R2 · Resend · Vercel
+
+---
+
+## Rodando localmente
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Crie um `.env` na raiz com as variáveis listadas em [`spec.md`](spec.md) → Apêndice A.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx prisma generate
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Abra [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | Servidor de desenvolvimento (Turbopack) |
+| `npm run build` | Build de produção (gera Prisma, sincroniza schema, compila) |
+| `npm test` | Suite de testes (Vitest) |
+| `npm run test:watch` | Testes em modo watch |
+| `npm run db:seed` | Popula o banco com a conta administradora |
+| `npm run patch` / `end-sprint` / `release` | Versionamento semântico |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+⚠️ O script `build` roda `prisma db push --accept-data-loss`. Enquanto o schema estiver
+sendo reescrito, **não rode build apontando para um banco com dados que importam**.
+Ver [`development/improvements.md`](development/improvements.md).
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Origem do código
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-"# basemedical" 
-
-
-# Sequência para Git Flow
-
-
-## Iniciando o Git Flow
-git checkout -b develop
-git flow init
-
-
-## Criação de uma feature
-git checkout develop
-git checkout -b name-feature
-
-git flow feature start name-feature
-
-
-## Finalização de uma feature
-git checkout develop
-git merge name-feature
-
-git flow feature finish name-feature
-
-
-
-### Branch Hotfix
-##Criação de um Hotfix
-git checkout master
-git checkout -b name-hotfix
-
-git flow hotfix start name-hotfix
-
-## Finalização de um Hotfix
-git checkout master
-git merge name-hotfix
-git checkout develop
-git merge name-hotfix
-git tag name-hotfix
-
-git flow hotfix finish name-hotfix
-
-
-
-### Branch Release
-## Criação de uma Release
-git checkout develop
-git checkout -b release/1.0.0
-
-git flow release start 1.0.0
-
-## Finalização de uma Release
-git checkout master
-git merge release/1.0.0
-git checkout develop
-git merge release/1.0.0
-git tag 1.0.0
-
-git flow release finish 1.0.0
-
-git checkout -b secao5aula50
-"# courtesyfy" 
-# courtesyfy
+Este repositório nasceu de um fork do **Courtesyfy** (SaaS de chaves promocionais).
+A infraestrutura de autenticação, pagamento, e-mail e design system foi reaproveitada;
+todo o domínio de chaves, campanhas e lojas está sendo removido no Release 0.
+Detalhes em [`spec.md`](spec.md) → Parte 11.

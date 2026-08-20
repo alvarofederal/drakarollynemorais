@@ -1,268 +1,97 @@
-# Courtesyfy — Conhecimento das APIs
+# API e Server Actions
 
-## Arquitetura de API
+> Rotas planejadas. Nenhuma implementada ainda — ver `development/features.md`.
 
-O Courtesyfy usa dois padrões de comunicação servidor-cliente:
+## API Routes
 
-1. **Server Actions** → para mutações internas (formulários, CRUD do dashboard)
-2. **API Routes** (`/api/*`) → para integrações externas, webhooks e endpoints públicos
+| Rota | Método | Autenticação | Descrição |
+|---|---|---|---|
+| `/api/auth/[...nextauth]` | GET/POST | — | Handlers NextAuth |
+| `/api/checkout` | POST | Sessão | Cria Stripe Checkout Session para um curso |
+| `/api/webhook/stripe` | POST | Assinatura Stripe | Cria matrícula, processa reembolso |
+| `/api/webhook/stream` | POST | Assinatura Cloudflare | Atualiza duração e status do vídeo |
+| `/api/video/[aulaId]/token` | GET | Sessão + matrícula | Token assinado do player (exp ≤ 2h) |
+| `/api/materiais/[id]/download` | GET | Sessão + matrícula | 302 para presigned URL do R2 (60s) |
+| `/api/upload/video` | POST | `ADMIN` | Cria URL de upload direto no Cloudflare Stream |
+| `/api/upload/imagem` | POST | `ADMIN` | Upload de imagem no Cloudinary |
+| `/api/certificados/[codigo]` | GET | Pública | Dados de validação do certificado |
+| `/api/cron/expirar-matriculas` | GET | `CRON_SECRET` | Expira matrículas com prazo vencido |
 
----
-
-## API Routes Disponíveis
-
-### Autenticação
-| Endpoint | Método | Descrição |
-|----------|--------|-----------|
-| `/api/auth/[...nextauth]` | GET/POST | Handlers NextAuth (OAuth Google, signin, signout) |
-| `/api/register` | POST | Registro de novo lojista |
-| `/api/verify-email` | POST | Verificação de email com token |
-
-### Chaves e Validação
-| Endpoint | Método | Auth | Descrição |
-|----------|--------|------|-----------|
-| `/api/chaves/validar` | POST | Bearer API Key | Validação pública via QR/código (consultar ou resgatar) |
-| `/api/cron/expirar-chaves` | GET | CRON_SECRET | Expiração automática de chaves — rodando diariamente às 03h UTC |
-
-#### `/api/chaves/validar`
-Permite que sistemas externos (PDVs, apps) consultem e resgatem chaves.
-
-**Autenticação:** Bearer token no formato `cfy.<lojaId>.<HMAC-sig>`
-O token é gerado deterministicamente via `computeApiKey(lojaId)` usando `API_KEY_SECRET`.
-O lojista visualiza sua API key em **Configurações > API Key**.
+## Padrão de API Route
 
 ```typescript
-// Body
-{
-  codigo:     string,                           // "XXXX-XXXX-XXXX-XXXX"
-  acao?:      "consultar" | "resgatar",        // default: "consultar"
-  observacao?: string                           // opcional, apenas para acao=resgatar
-}
+export async function POST(req: NextRequest) {
+  const session = await auth()
+  if (!session?.user) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+  }
 
-// Resposta sucesso — consultar
-{
-  ok: true, acao: "consultar",
-  chave: { codigo, status, campanha, beneficio, expiraEm, clienteNome,
-           clienteTelefone, clienteEmail, ativadaEm }
-}
+  const parsed = schema.safeParse(await req.json())
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
+  }
 
-// Resposta sucesso — resgatar
-{
-  ok: true, acao: "resgatar",
-  chave: { codigo, status: "RESGATADA", campanha, beneficio, resgatadaEm,
-           clienteNome, clienteTelefone, clienteEmail }
+  // regra de negócio → persistência → LogEvento
+  return NextResponse.json({ ok: true })
 }
-
-// Resposta erro
-{ ok: false, error: string, status?: string }  // status HTTP: 400/401/403/404/409/410/422
 ```
 
-**Regras:**
-- `consultar`: leitura pura — não grava nada no banco
-- `resgatar`: só funciona se status for `ATIVADA`; marca `RESGATADA` + cria `Resgate` + `LogEvento`
-- A chave deve pertencer à loja da API key (isolamento por `lojaId`)
-
-#### `/api/cron/expirar-chaves`
-Executado automaticamente pelo Vercel Cron todos os dias às 03:00 UTC.
-Configurado em `vercel.json`. Autenticado via `Authorization: Bearer <CRON_SECRET>`.
-
-```bash
-# Teste manual (dev sem auth, produção com header)
-curl https://courtesyfy.com.br/api/cron/expirar-chaves \
-  -H "Authorization: Bearer $CRON_SECRET"
-
-# Resposta
-{ ok: true, chavesExpiradas: 42, campanhasEncerradas: 3, executadoEm: "2026-05-20T03:00:00.000Z" }
-```
-
-### Stripe e Pagamentos
-| Endpoint | Método | Auth | Descrição |
-|----------|--------|------|-----------|
-| `/api/checkout-produto` | POST | Nenhuma (allowlist) | Checkout público de kits físicos |
-| `/api/webhook` | POST | Stripe signature | Sincroniza assinaturas após eventos Stripe |
-
-#### `/api/checkout-produto`
-Permite que qualquer visitante da landing page compre kits de impressão sem estar logado.
-Valida o `priceId` contra uma allowlist de IDs configurados no `.env` antes de criar a sessão.
+## Padrão de webhook (idempotente)
 
 ```typescript
-// Body
-{ priceId: string }
+const event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
 
-// Resposta sucesso
-{ url: string }  // URL do Stripe Checkout
+if (event.type === "checkout.session.completed") {
+  const s = event.data.object as Stripe.Checkout.Session
 
-// Resposta erro
-{ error: string }
+  // idempotência: stripeSessionId é único no banco
+  const existente = await db.pedido.findUnique({ where: { stripeSessionId: s.id } })
+  if (existente?.status === "PAGO") return NextResponse.json({ received: true })
+
+  await db.$transaction([ /* Pedido PAGO + Matricula ATIVA + LogEvento */ ])
+}
 ```
 
-**Price IDs permitidos:** todos os 6 kits definidos em `STRIPE_PRICE_*` no `.env`.
+## Server Actions
 
-### Upload
-| Endpoint | Método | Auth | Descrição |
-|----------|--------|------|-----------|
-| `/api/upload` | POST | Sessão | Upload de imagem para Cloudinary (logos de loja) |
+Organizadas em `_actions/` junto da rota que as usa.
 
----
+| Ação | Local | Papel |
+|---|---|---|
+| `criarCurso` `atualizarCurso` `publicarCurso` | `admin/cursos/_actions` | `ADMIN` |
+| `criarModulo` `reordenarModulos` | `admin/cursos/_actions` | `ADMIN` |
+| `criarAula` `atualizarAula` `reordenarAulas` | `admin/cursos/_actions` | `ADMIN` |
+| `anexarMaterial` `removerMaterial` | `admin/cursos/_actions` | `ADMIN` |
+| `concederMatricula` `revogarMatricula` | `admin/matriculas/_actions` | `ADMIN` |
+| `salvarProgresso` `concluirAula` | `aluno/_actions` | `ALUNO` + matrícula |
+| `emitirCertificado` | `aluno/_actions` | `ALUNO` + conclusão |
+| `atualizarPerfil` | `aluno/perfil/_actions` | Sessão |
 
-## Server Actions — Padrão
+### Padrão
 
 ```typescript
 "use server"
 
-import { auth } from "@/lib/auth"
-import { db } from "@/lib/prisma"
-import { z } from "zod"
-import { revalidatePath } from "next/cache"
-
-const Schema = z.object({ campo: z.string().min(1) })
-
-export async function minhaAction(data: unknown) {
+export async function salvarProgresso(input: unknown) {
   const session = await auth()
-  if (!session?.user?.lojaId) return { error: "Não autorizado" }
+  if (!session?.user) return { error: "Não autorizado" }
 
-  const parsed = Schema.safeParse(data)
+  const parsed = progressoSchema.safeParse(input)
   if (!parsed.success) return { error: "Dados inválidos" }
 
-  // verificar permissão de plano se necessário
-  // await verificarLimitePlano(session.user.lojaId, "campanhas")
+  await exigirAcesso(session.user.id, parsed.data.cursoId)
 
-  await db.model.create({
-    data: { ...parsed.data, lojaId: session.user.lojaId },
-  })
-
-  revalidatePath("/dashboard/feature")
+  // executa
+  revalidatePath(`/aluno/curso/${slug}`)
   return { ok: true }
 }
 ```
 
-### Server Actions admin (Super Admin)
+## Formato de retorno
 
-```typescript
-"use server"
-
-import { auth } from "@/lib/auth"
-
-async function assertAdmin() {
-  const session = await auth()
-  if (session?.user?.role !== "SUPER_ADMIN") throw new Error("Não autorizado")
-}
-
-export async function acaoAdmin(...) {
-  await assertAdmin()
-  // ...
-}
-```
+Server Actions retornam `{ ok: true, data? }` ou `{ error: string }`.
+Nunca lançam exceção para erro esperado — exceção é só para falha real de infraestrutura.
 
 ---
 
-## Stripe — Actions de Admin
-
-Localizadas em `src/app/(panel)/dashboard/admin/stripe/produtos/_actions.ts`:
-
-| Action | O que faz |
-|--------|-----------|
-| `atualizarProduto(id, { nome, descricao })` | Atualiza nome/descrição no Stripe |
-| `arquivarProduto(id)` | Define `active: false` no produto |
-| `atualizarNicknamePreco(priceId, nickname)` | Atualiza nickname do preço |
-| `arquivarPreco(priceId)` | Define `active: false` no preço |
-| `criarPreco(produtoId, { amount, currency, recurring, interval, nickname })` | Cria novo preço (retorna `priceId`) |
-| `criarProduto({ nome, descricao })` | Cria novo produto (retorna `produtoId`) |
-
-> ⚠️ **Preços Stripe são imutáveis para valor** — só nickname pode ser editado.
-> Para mudar valor: arquivar o preço antigo e criar um novo.
-
----
-
-## Webhook Stripe
-
-**Rota:** `POST /api/webhook`
-**Segurança:** Verifica assinatura com `STRIPE_SECRET_WEBHOOK_KEY`
-
-Eventos tratados:
-| Evento | Ação |
-|--------|------|
-| `checkout.session.completed` | Ativa plano após pagamento de assinatura ou produto |
-| `customer.subscription.updated` | Atualiza plano da loja |
-| `customer.subscription.deleted` | Suspende loja (plano → ESSENCIAL ou `status: SUSPENSO`) |
-| `invoice.payment_succeeded` | Renova assinatura ativa |
-| `invoice.payment_failed` | Marca pagamento pendente |
-
-**Teste local:**
-```bash
-stripe listen --api-key sk_test_51TWPs2... --forward-to localhost:3000/api/webhook
-```
-
----
-
-## Padrão de Resposta das API Routes
-
-```typescript
-// Sucesso
-return NextResponse.json({ data: result }, { status: 200 })
-
-// Erro de validação
-return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
-
-// Não autenticado
-return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-
-// Não encontrado
-return NextResponse.json({ error: "Não encontrado" }, { status: 404 })
-
-// Erro interno
-return NextResponse.json({ error: "Erro interno" }, { status: 500 })
-```
-
----
-
-## Integrações Externas
-
-### Stripe
-**Config:** `src/lib/stripe.ts`
-
-```typescript
-import { stripe } from "@/lib/stripe"
-
-// Exemplos
-await stripe.products.list({ active: true, limit: 50 })
-await stripe.prices.list({ product: prodId, active: true })
-await stripe.checkout.sessions.create({ mode: "payment", ... })
-```
-
-### Resend (Email)
-**Config:** `src/lib/email.ts` (ou similar)
-
-```typescript
-import { Resend } from "resend"
-const resend = new Resend(process.env.RESEND_API_KEY)
-
-await resend.emails.send({
-  from: "noreply@courtesyfy.com",
-  to: cliente.email,
-  subject: "Sua cortesia foi ativada!",
-  react: <EmailTemplate ... />,
-})
-```
-
-### Cloudinary (Upload)
-```typescript
-// Enviar FormData para /api/upload
-const formData = new FormData()
-formData.append("file", file)
-const { url } = await fetch("/api/upload", { method: "POST", body: formData }).then(r => r.json())
-```
-
-### Twilio (WhatsApp)
-```typescript
-import { sendWhatsApp } from "@/lib/whatsapp"
-
-await sendWhatsApp({
-  to: "+5511999999999",
-  message: "Sua cortesia foi ativada com sucesso!",
-})
-```
-
----
-
-*Atualizado em: 2026-05-13*
+*Atualizado em: 2026-08-20*

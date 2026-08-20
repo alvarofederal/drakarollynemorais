@@ -1,4 +1,4 @@
-# Courtesyfy — Guia para Claude Code
+# Plataforma de Cursos — Dra. Karollyne Morais — Guia para Claude Code
 
 > Este arquivo é carregado automaticamente pelo Claude Code em toda sessão.
 > Leia-o completamente antes de fazer qualquer alteração no projeto.
@@ -7,46 +7,66 @@
 
 ## O que é este projeto?
 
-**Courtesyfy** é um SaaS B2B para gestão de campanhas promocionais com chaves únicas (cortesias).
-Lojistas criam campanhas, geram chaves com QR Code, distribuem para clientes e validam resgates.
-Stack: Next.js 15 (App Router) + TypeScript + MySQL (Prisma) + Stripe + Vercel.
-**Versão atual:** 1.0.2 | **Branch ativo:** main | **Status:** MVP em produção — **[courtesyfy.com.br](https://courtesyfy.com.br)**
+Plataforma de cursos online (área de membros) da **Dra. Karollyne Morais**, médica.
+Ela publica cursos com aulas em vídeo, slides e PDFs; alunos compram, assistem, acompanham
+o progresso e recebem certificado de conclusão.
+
+**Stack:** Next.js 16 (App Router) + TypeScript + MySQL (Prisma) + Stripe + Cloudflare Stream + Vercel
+**Versão atual:** 0.1.0 (pré-MVP) | **Branch ativo:** main | **Status:** em construção — Release 0
+
+⚠️ **Este repositório nasceu de um fork do Courtesyfy** (SaaS de chaves promocionais). Boa
+parte da infraestrutura é reaproveitada, mas **todo o domínio de chaves/campanhas/lojas está
+sendo removido**. Se você encontrar código de `Chave`, `Campanha`, `Loja`, `Resgate`,
+`LoteChave` ou `SolicitacaoImpressao`, é legado a ser apagado — não construa em cima dele.
 
 ---
 
-## Arquivos de Contexto - LEIA ANTES DE CODAR
+## Documento mestre
 
-Consulte estes arquivos para entender o projeto em profundidade:
+**[`spec.md`](spec.md)** é a especificação completa do projeto — visão, personas, requisitos
+funcionais com critérios de aceite, modelo de dados, arquitetura, releases, custos e riscos.
+**Leia antes de propor qualquer feature.**
+
+---
+
+## Arquivos de contexto
 
 | Arquivo | Quando ler |
 |---------|-----------|
-| `context/system.md` | Visão geral, atores, stack, planos, integrações |
+| `spec.md` | **Sempre.** Especificação completa do produto |
+| `context/system.md` | Visão geral, atores, stack, integrações |
 | `context/architecture.md` | Estrutura de pastas, padrões de código |
 | `context/rules.md` | Convenções, checklist, o que nunca fazer |
-| `planning/roadmap.md` | MVP, P0, P1, P2 — o que foi feito e o que está planejado |
+| `planning/roadmap.md` | Releases R0 a R4 e o que vem depois |
 | `planning/backlog.md` | Funcionalidades priorizadas |
 | `planning/releases.md` | Histórico de versões |
-| `development/features.md` | Features em andamento agora |
+| `development/features.md` | O que está em andamento agora |
 | `development/bugs.md` | Bugs conhecidos |
 | `development/improvements.md` | Melhorias técnicas planejadas |
-| `knowledge/database.md` | Schema Prisma completo, enums, queries comuns |
-| `knowledge/api.md` | Endpoints, padrões de Server Actions |
-| `knowledge/domain.md` | Vocabulário, regras de negócio, fluxos, estados da chave |
+| `knowledge/database.md` | Schema Prisma, enums, queries comuns |
+| `knowledge/api.md` | Endpoints e padrões de Server Actions |
+| `knowledge/domain.md` | Vocabulário, regras de negócio, estados |
 
 ---
 
-## Regras Críticas - NUNCA ignore
+## Regras Críticas — NUNCA ignore
 
-1. **Não alterar schema Prisma** sem confirmar com o usuário — `db push --accept-data-loss` pode apagar dados
-2. **Não mudar sistema de autenticação** (NextAuth) sem discussão
-3. **Não mexer em lógica de cobrança/Stripe** sem entender o impacto
-4. **Sempre usar** `import { db } from "@/lib/prisma"` para Prisma
-5. **Sempre usar** `import { auth } from "@/lib/auth"` para sessão
-6. **Sempre validar** inputs com Zod nas Server Actions e API Routes
-7. **Sempre verificar permissões** por plano da loja antes de criar recursos
-8. **Chave resgatada é imutável** — nunca alterar status de RESGATADA para outro
-9. **Código da chave é único global** — sempre verificar duplicata antes de persistir
-10. **Role de super admin é `SUPER_ADMIN`** — nunca usar `"ADMIN"` para verificar permissão de super admin
+1. **A matrícula ativa é o único portão de acesso.** Nenhuma rota de conteúdo confia em
+   sessão, cookie ou parâmetro de URL — sempre consulta `Matricula` no servidor
+2. **Vídeo nunca é servido por URL pública** — sempre token assinado gerado no servidor
+   depois de validar a matrícula, com expiração de no máximo 2 horas
+3. **Material (PDF/slide) nunca é servido por URL pública** — rota autenticada que emite
+   URL temporária de 60 segundos
+4. **Webhook de pagamento é idempotente** — `stripeSessionId` é único; reprocessar o mesmo
+   evento nunca duplica pedido ou matrícula
+5. **Certificado emitido é imutável** — os dados são congelados na emissão, nunca recalculados
+6. **Progresso e certificado nunca são apagados** por cancelamento, reembolso ou expiração;
+   só o acesso é revogado
+7. **Curso arquivado não tira acesso de quem já comprou**
+8. **Não alterar schema Prisma** sem confirmar — `db push --accept-data-loss` apaga dados
+9. **Não mudar o sistema de autenticação** (NextAuth) sem discussão
+10. **Sempre validar inputs com Zod** nas Server Actions e API Routes
+11. **Role de administradora é `ADMIN`** (a Dra.). Alunos são `ALUNO`. Nunca confundir
 
 ---
 
@@ -57,14 +77,24 @@ Consulte estes arquivos para entender o projeto em profundidade:
 "use server"
 const session = await auth()
 if (!session?.user) return { error: "Não autorizado" }
-// valida com Zod → verifica permissão de plano → executa → revalidatePath
+// valida com Zod → verifica papel/matrícula → executa → revalidatePath
 ```
 
-### Componente com dados
+### Verificação de acesso a conteúdo
 ```typescript
-// Server Component (padrão) → busca dados direto
-// Client Component → usa React Query ou Server Action
-"use client" // só quando necessário (hooks, eventos, formulários)
+const matricula = await db.matricula.findUnique({
+  where: { userId_cursoId: { userId: session.user.id, cursoId } },
+})
+const temAcesso =
+  matricula?.status === "ATIVA" &&
+  (!matricula.expiraEm || matricula.expiraEm > new Date())
+if (!temAcesso) redirect(`/cursos/${slug}`)
+```
+
+### Verificação de permissão de administradora
+```typescript
+const session = await auth()
+if (session?.user?.role !== "ADMIN") redirect("/aluno")
 ```
 
 ### Importações
@@ -75,86 +105,59 @@ import { cn } from "@/lib/utils"        // para classnames
 import { stripe } from "@/lib/stripe"   // para Stripe
 ```
 
-### Verificação de permissão admin (Super Admin)
+### Componentes
 ```typescript
-const session = await auth()
-if (session?.user?.role !== "SUPER_ADMIN") redirect("/dashboard")
+// Server Component (padrão) → busca dados direto
+// Client Component → React Query ou Server Action
+"use client" // só quando necessário (hooks, eventos, formulários, player)
 ```
 
 ---
 
-## Stripe — Conta Courtesyfy
+## Integrações
 
-**Conta:** `acct_1TWPs2ADOPgqdFsc` | **Modo atual:** Test (`pk_test_` / `sk_test_`)
+| Serviço | Uso | Situação |
+|---|---|---|
+| **Cloudflare Stream** | Hospedagem e entrega de vídeo com URL assinada | 🆕 a integrar |
+| **Cloudflare R2** | Bucket privado de PDFs e slides | 🆕 a integrar |
+| **Stripe** | Checkout de curso + webhook de matrícula | ✅ base pronta, adaptar |
+| **Cloudinary** | Imagens públicas (capas, avatares) | ✅ pronto |
+| **Resend** | E-mails transacionais (React Email) | ✅ pronto |
+| **Upstash Redis** | Rate limit | ✅ pronto |
+| **NextAuth v5** | Credentials + Google + GitHub | ✅ pronto |
 
-### Price IDs configurados no `.env`
-| Variável de ambiente | Produto |
-|---------------------|---------|
-| `STRIPE_PLAN_PROFESSIONAL` | Plano Profissional — R$ 99/mês (recorrente) |
-| `STRIPE_PLAN_EMPRESARIAL` | Plano Empresarial — R$ 199/mês (recorrente) |
-| `STRIPE_PRICE_IMPRESSAO_KIT50` | Papel Offset 240g — Kit 50 cards (único) |
-| `STRIPE_PRICE_IMPRESSAO_KIT100` | Papel Offset 240g — Kit 100 cards (único) |
-| `STRIPE_PRICE_CHAVEIRO_KIT10` | MDF Chaveiro 7×3,5cm — Kit 10 peças (único) |
-| `STRIPE_PRICE_CHAVEIRO_KIT100` | MDF Chaveiro 7×3,5cm — Kit 100 peças (único) |
-| `STRIPE_PRICE_MDF_QUADRADO_KIT10` | MDF Quadrado 9×9cm — Kit 10 peças (único) |
-| `STRIPE_PRICE_MDF_QUADRADO_KIT50` | MDF Quadrado 9×9cm — Kit 50 peças (único) |
-
-### Webhook
-- **Produção:** `https://courtesyfy.com.br/api/webhook`
-- **Local (desenvolvimento):**
-```bash
-stripe listen --api-key sk_test_51TWPs2... --forward-to localhost:3000/api/webhook
-# ou: npm run stripe:listen:local
-```
+Variáveis de ambiente: ver `spec.md` → Apêndice A.
 
 ---
 
-## Mapa de Telas (Rotas)
+## Mapa de Telas (planejado)
 
 ### Públicas
 | Rota | Descrição |
 |------|-----------|
-| `/` | Landing page com planos de assinatura e kits de impressão (CTAs conectados ao Stripe) |
-| `/c/[codigo]` | Página pública da chave — cliente consulta benefício |
-| `/c/[codigo]/ativar` | Ativação da chave — coleta tel/email do cliente |
-| `/resgatar` | Scanner / digitação de código pelo cliente |
-| `/register` | Cadastro de novo lojista (aceita `?plano=PROFISSIONAL` / `?plano=EMPRESARIAL`) |
-| `/login` | Login |
+| `/` | Landing page (referência visual: lp.cademi.com.br) |
+| `/cursos` | Catálogo de cursos |
+| `/cursos/[slug]` | Página de vendas do curso |
+| `/professores/[slug]` | Perfil do professor convidado |
+| `/certificados/[codigo]` | Validação pública de certificado |
+| `/login` `/cadastro` `/recuperar-senha` | Autenticação |
 
-### Dashboard — Lojista (`/dashboard/*`)
+### Área do aluno (`/aluno/*`)
 | Rota | Descrição |
 |------|-----------|
-| `/dashboard` | Home com métricas da loja |
-| `/dashboard/campanhas` | Listagem de campanhas |
-| `/dashboard/campanhas/[id]` | Detalhe + lote de chaves da campanha |
-| `/dashboard/chaves` | Listagem de chaves com filtros |
-| `/dashboard/resgates` | Histórico de resgates |
-| `/dashboard/clientes` | Lista de clientes com busca |
-| `/dashboard/clientes/[id]` | Detalhe do cliente com histórico de chaves |
-| `/dashboard/validar` | Validação rápida de chaves (operador no balcão) |
-| `/dashboard/totem` | Modo totem para auto-atendimento |
-| `/dashboard/impressao` | Exportação de chaves para impressão |
-| `/dashboard/planos` | Gerenciar assinatura (upgrade/downgrade) |
+| `/aluno` | Meus cursos e progresso |
+| `/aluno/curso/[slug]/[aulaSlug]` | Sala de aula: player + materiais |
+| `/aluno/certificados` | Certificados emitidos |
+| `/aluno/perfil` | Dados pessoais e CPF |
 
-### Dashboard — Super Admin (`/dashboard/admin/*`)
+### Painel da Dra. (`/admin/*`)
 | Rota | Descrição |
 |------|-----------|
-| `/dashboard/admin` | Painel geral admin |
-| `/dashboard/admin/stripe` | Métricas Stripe: MRR, assinantes, renovações, lojas suspensas, eventos |
-| `/dashboard/admin/stripe/produtos` | Gerenciar produtos e preços no Stripe (edição inline) |
-
----
-
-## API Routes Principais
-
-| Rota | Método | Autenticação | Descrição |
-|------|--------|-------------|-----------|
-| `/api/checkout-produto` | POST | Nenhuma (allowlist de priceIds) | Checkout público de kits físicos |
-| `/api/webhook` | POST | Stripe signature | Sincroniza assinaturas após pagamento |
-| `/api/upload` | POST | Sessão | Upload de imagem para Cloudinary |
-| `/api/auth/[...nextauth]` | GET/POST | — | Handlers NextAuth |
-| `/api/chaves/validar` | POST | API Key | Validação externa via QR — **a implementar** |
-| `/api/cron/expirar-chaves` | GET | CRON_SECRET | Expiração automática de chaves — **a implementar** |
+| `/admin` | Dashboard de resultados |
+| `/admin/cursos/[id]` | Editor de curso, módulos e aulas |
+| `/admin/alunos` | Gestão de alunos e matrículas |
+| `/admin/pedidos` | Vendas e status de pagamento |
+| `/admin/configuracoes` | Marca, textos da landing, contato |
 
 ---
 
@@ -177,37 +180,26 @@ npm run build
 
 ## O que está sendo desenvolvido AGORA
 
-Ver `development/features.md` para o status atual.
+Ver `development/features.md`.
 
-**Resumo rápido (atualizado 2026-05-13):**
-- MVP completo e em produção no Vercel
-- Stripe integrado: planos + produtos físicos (kits de impressão) com checkout público
-- Tela de Clientes implementada (lista + detalhe)
-- Admin Stripe expandido com MRR, renovações, eventos e gerenciamento de produtos
-- **Próximas prioridades:** API pública `/api/chaves/validar` + cron de expiração automática
-
----
-
-## ⚡ Comando rápido para iniciar contexto
-
-Em uma nova sessão, para carregar todo o contexto do projeto, rode:
-
-```
-/iniciar-contexto
-```
+**Resumo rápido (2026-08-20):**
+- Projeto recém-iniciado. `spec.md` escrita e validada nas 4 decisões estruturais
+- **Release 0 (fundação):** limpar o legado do Courtesyfy, reescrever o schema Prisma,
+  criar conta Cloudflare, definir marca e domínio
+- Próximo marco: **R1 — núcleo do conteúdo** (painel de cursos + sala de aula)
 
 ---
 
 ## Como atualizar os arquivos de contexto
 
-Quando houver mudanças significativas, atualize os arquivos relevantes:
 - Nova feature concluída → `planning/releases.md` + `development/features.md`
 - Bug encontrado → `development/bugs.md`
-- Decisão arquitetural → `context/architecture.md`
-- Nova regra de negócio → `knowledge/domain.md`
+- Decisão arquitetural → `context/architecture.md` (e ADR em `docs/adr/` se for relevante)
+- Nova regra de negócio → `knowledge/domain.md` + `context/rules.md`
 - Novo endpoint → `knowledge/api.md`
 - Mudança no banco → `knowledge/database.md`
+- Mudança de escopo do produto → `spec.md`
 
 ---
 
-*Criado em: 2026-05-02 | Atualizado em: 2026-05-13*
+*Criado em: 2026-08-20 | Atualizado em: 2026-08-20*

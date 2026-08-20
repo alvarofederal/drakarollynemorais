@@ -1,1239 +1,956 @@
-# Achei no Jardim Botânico — Especificação Completa do Projeto
+# Plataforma de Cursos — Dra. Karollyne Morais
+## Especificação Inicial (v0.1 — descoberta)
 
-> Documento mestre de especificação combinando **Lean Inception** (descoberta), **Jobs to Be Done** (análise de demanda), **Spec-Driven Development** (execução com IA) e **arquitetura técnica**. Este é o contrato que vai guiar o desenvolvimento do início ao fim. Os artefatos aqui são vivos — evoluem com o projeto, não são entregáveis de planejamento que ficam esquecidos numa gaveta.
-
----
-
-## Parte 0 — Como vamos trabalhar (o método)
-
-Antes de qualquer feature, alinhamos sobre o **como**. Este projeto vai combinar três práticas complementares:
-
-### 0.1 Lean Inception (Caroli) — para descoberta
-
-Workshop tradicional de 1 semana que produz uma visão compartilhada do produto antes de qualquer linha de código. Foi criado por Paulo Caroli e é usado por empresas como Thoughtworks, Caelum, Globo. Os artefatos chave que produziremos:
-
-1. **Visão do Produto** (formato Geoffrey Moore)
-2. **Produto É / Não É / Faz / Não Faz**
-3. **Personas**
-4. **Jornadas de Usuário**
-5. **Brainstorm de Features** + revisão técnica/UX/negócio
-6. **Feature Canvas** (uma por feature crítica)
-7. **MVP Canvas**
-8. **Sequencer** (sequenciamento de releases)
-
-Diferente do workshop original que demanda múltiplos stakeholders presenciais, vamos rodar uma versão adaptada para projeto solo + IA, onde cada artefato é um documento de spec versionado.
-
-### 0.2 Jobs to Be Done (Christensen / Ulwick) — para entender demanda
-
-Em vez de perguntar "que features o cliente quer?", JTBD pergunta "que progresso o cliente está tentando fazer na vida quando contrata um produto?". A pergunta certa não é *quem é o cliente*, é *qual job ele está tentando completar*. Vamos usar especificamente:
-
-- **Job Statements** no formato canônico: *"Quando [situação], eu quero [motivação], para que [resultado esperado]"*
-- **Dimensões do job**: funcional, emocional, social
-- **Forces of Progress**: o que puxa o cliente para a solução, o que segura ele na situação atual
-
-### 0.3 Spec-Driven Development (GitHub Spec-Kit) — para execução com Claude Code
-
-O Spec-Kit do GitHub formalizou em set/2025 um workflow de 6 comandos para desenvolvimento com agentes de IA. A filosofia: **a spec é o source of truth, código é output regenerável**. Os comandos:
-
-```
-/speckit.constitution  → define princípios invioláveis do projeto
-/speckit.specify       → cria a spec da feature (o "o quê")
-/speckit.plan          → cria o plano técnico de implementação (o "como")
-/speckit.tasks         → quebra o plano em tarefas executáveis
-/speckit.taskstoissues → converte em issues do GitHub (opcional)
-/speckit.implement     → executa as tarefas
-```
-
-Vamos instalar o Spec-Kit no projeto base e usar esse fluxo. Cada feature passa por *constitution → specify → plan → tasks → implement* antes de virar PR.
-
-### 0.4 Como os três se conectam neste projeto
-
-```
-LEAN INCEPTION (descoberta)
-        ↓
-  Personas + Jornadas + Features brainstorm
-        ↓
-JTBD (validação de demanda)
-        ↓
-  Job Statements + Forces of Progress
-        ↓
-MVP Canvas + Sequencer (priorização)
-        ↓
-SPEC-DRIVEN DEV (execução com Claude Code)
-        ↓
-  /constitution → /specify → /plan → /tasks → /implement
-        ↓
-       Código
-```
-
-A Lean Inception responde *o que vamos construir e por quê*. JTBD afirma *para qual progresso real isso serve*. Spec-Driven Dev é *como construir cada peça com a IA sem cair em vibe-coding*.
+> Documento mestre do projeto. Combina **Lean Inception** (descoberta), **Jobs to Be Done**
+> (entender a demanda real) e **Spec-Driven Development** (execução com IA).
+> É um documento **vivo**: evolui a cada release, não é entregável de gaveta.
+>
+> **Status:** rascunho para validação com a Dra. Karollyne
+> **Data:** 2026-08-20
+> **Autor técnico:** Álvaro | **Product Owner:** Dra. Karollyne Morais
 
 ---
 
-## Parte 1 — Lean Inception
+## Sumário
 
-### 1.1 Visão do Produto (Geoffrey Moore Template)
+- [Parte 0 — Decisões já travadas](#parte-0--decisões-já-travadas)
+- [Parte 1 — Visão do produto](#parte-1--visão-do-produto)
+- [Parte 2 — Atores e permissões](#parte-2--atores-e-permissões)
+- [Parte 3 — Jobs to Be Done](#parte-3--jobs-to-be-done)
+- [Parte 4 — Domínio e vocabulário](#parte-4--domínio-e-vocabulário)
+- [Parte 5 — Requisitos funcionais](#parte-5--requisitos-funcionais)
+- [Parte 6 — Requisitos não funcionais](#parte-6--requisitos-não-funcionais)
+- [Parte 7 — Regras de negócio invioláveis](#parte-7--regras-de-negócio-invioláveis)
+- [Parte 8 — Modelo de dados](#parte-8--modelo-de-dados)
+- [Parte 9 — Arquitetura e integrações](#parte-9--arquitetura-e-integrações)
+- [Parte 10 — Landing page](#parte-10--landing-page)
+- [Parte 11 — Reaproveitamento do projeto base](#parte-11--reaproveitamento-do-projeto-base)
+- [Parte 12 — Releases](#parte-12--releases)
+- [Parte 13 — Custos](#parte-13--custos)
+- [Parte 14 — Riscos e conformidade](#parte-14--riscos-e-conformidade)
+- [Parte 15 — Decisões em aberto](#parte-15--decisões-em-aberto)
+- [Apêndice A — Variáveis de ambiente](#apêndice-a--variáveis-de-ambiente)
+- [Apêndice B — Checklist de setup (Release 0)](#apêndice-b--checklist-de-setup-release-0)
 
-> **PARA** moradores e visitantes do Jardim Botânico (DF) e bairros adjacentes
-> **QUE** precisam encontrar negócios, serviços e estabelecimentos próximos com informações confiáveis e atualizadas,
-> **O Achei no Jardim Botânico** é um **guia comercial digital hiperlocal**
-> **QUE** centraliza os negócios da região com fotos, horários, contato direto via WhatsApp e avaliações reais,
-> **DIFERENTE DE** Google Maps (genérico, sem curadoria local), Instagram (precisa saber o nome do negócio antes), grupos de WhatsApp (informação solta e perdida),
-> **NOSSO PRODUTO** entrega curadoria local profissional, fotografia própria dos estabelecimentos parceiros e um painel onde o dono do negócio gerencia sua presença digital sem precisar contratar agência.
+---
+
+## Parte 0 — Decisões já travadas
+
+Quatro decisões estruturais foram tomadas na abertura do projeto. Elas condicionam todo o
+resto deste documento.
+
+| # | Decisão | Escolha | Consequência |
+|---|---------|---------|--------------|
+| D1 | **Escopo** | Plataforma **exclusiva da Dra. Karollyne**. Ela é a única produtora e curadora. Professores convidados aparecem como autores do curso, mas **não têm login** — ela publica por eles. | Sem multi-tenant. Sem isolamento de dados por instrutor. Um único painel administrativo. Modelo de dados muito mais simples. |
+| D2 | **Monetização** | **Venda direta com Stripe** — checkout no próprio site, compra por curso. | Reaproveitamos a integração Stripe que já existe no projeto base. Exige webhook idempotente e política de reembolso. |
+| D3 | **Vídeo** | **Cloudflare Stream** — URLs assinadas, upload direto do navegador, player próprio. | Custo variável por minuto assistido. Requer token assinado por sessão. Sem limite de upload da Vercel. |
+| D4 | **MVP** | Área de membros + player + PDF/slides · Landing estilo Cademí · Painel da Dra. · Certificado de conclusão. | Quatro frentes no primeiro release. Comentários, quizzes e comunidade ficam para a v1.1. |
+
+### Como vamos trabalhar (o método)
+
+```
+Lean Inception  →  Jobs to Be Done  →  Spec-Driven Development
+   (o quê)             (por quê)              (como)
+      ↓                    ↓                     ↓
+ este documento      Parte 3 deste doc     specs/NNN-feature/
+```
+
+Cada feature grande ganha uma pasta `specs/NNN-nome/` com `spec.md` (o quê e critérios de
+aceite), `plan.md` (decisões técnicas) e `tasks.md` (tarefas atômicas). Decisões
+arquiteturais relevantes viram ADRs em `docs/adr/`.
+
+---
+
+## Parte 1 — Visão do produto
+
+### 1.1 Visão (template Geoffrey Moore)
+
+> **Para** médicos, residentes e estudantes de medicina que precisam de formação prática e
+> confiável na área de atuação da Dra. Karollyne,
+> **que** hoje dependem de PDFs soltos no WhatsApp, gravações perdidas em drives e cursos
+> genéricos de marketplace onde ninguém responde dúvidas,
+> **a plataforma da Dra. Karollyne Morais é** uma área de membros com cursos em vídeo,
+> slides e materiais de apoio,
+> **que** entrega uma trilha organizada, acesso em qualquer dispositivo, acompanhamento de
+> progresso e certificado ao final,
+> **diferente de** Hotmart, Kiwify ou grupos de WhatsApp,
+> **o nosso produto** é 100% da marca dela: sem concorrente na mesma tela, sem taxa de
+> marketplace, com a base de alunos e os dados sob controle dela.
 
 ### 1.2 Produto É / Não É / Faz / Não Faz
 
-| **É** | **NÃO É** |
+| **É** | **Não é** |
 |---|---|
-| Um guia comercial digital hiperlocal | Um marketplace de produtos (não vendemos transação) |
-| Um catálogo curado de negócios da região | Um portal de notícias |
-| Uma plataforma de presença digital paga | Um serviço de delivery |
-| Uma ponte entre comerciante e cliente local | Uma rede social |
-| Um espaço de credibilidade (avaliações, fotos profissionais) | Um classificado de usados (tipo OLX) |
+| Uma área de membros com marca própria | Um marketplace de cursos de terceiros |
+| Um canal direto entre a Dra. e os alunos dela | Uma rede social |
+| Um repositório organizado de vídeo, slide e PDF | Um Google Drive com link compartilhado |
+| Uma loja de cursos com checkout próprio | Uma assinatura tipo Netflix (por ora) |
 
-| **FAZ** | **NÃO FAZ** |
+| **Faz** | **Não faz** |
 |---|---|
-| Lista negócios por categoria e proximidade | Processa pagamentos entre cliente e estabelecimento |
-| Importa dados iniciais via Google Places API | Faz reservas/agendamentos (v1) |
-| Permite ao dono reivindicar e gerenciar perfil | Modera reviews (v1 — usa só as do Google) |
-| Cobra mensalidade do anunciante por destaque | Vende anúncios via leilão tipo Google Ads |
-| Tira fotos profissionais para planos pagos | Cria conteúdo editorial diário |
+| Vende curso com cartão e gera matrícula automática | Não emite nota fiscal automaticamente (v2) |
+| Hospeda vídeo com acesso protegido por matrícula | Não faz transmissão ao vivo no MVP |
+| Emite certificado com código de validação pública | Não certifica carga horária junto a órgão de classe |
+| Rastreia progresso por aula | Não corrige prova nem aplica quiz no MVP |
+| Permite liberar acesso de cortesia manualmente | Não gerencia turmas presenciais nem chamada |
 
 ### 1.3 Personas
 
-#### Persona 1 — Marina, 34, moradora do Jardim Botânico
+**P1 — Dra. Karollyne (Produtora / Administradora)**
+Médica, produz o conteúdo, grava as aulas, monta os slides. Não é técnica.
+- **Precisa:** subir uma aula nova em menos de 5 minutos, sem depender de ninguém.
+- **Teme:** que o conteúdo dela vaze; que um aluno pague e não consiga assistir.
+- **Sucesso para ela:** abrir o painel e ver quantos alunos estão estudando agora.
 
-**Demografia:** Casada, 2 filhos pequenos, trabalha em órgão público, renda familiar R$15-25k/mês, mora há 4 anos no JBT.
+**P2 — Médico / Residente (aluno principal)**
+25–45 anos, plantonista, tempo fragmentado, estuda pelo celular entre um atendimento e outro.
+- **Precisa:** continuar de onde parou, baixar o PDF para ler offline, achar rápido a aula X.
+- **Teme:** pagar caro e receber conteúdo raso; perder o acesso depois de um tempo.
+- **Sucesso para ele:** aplicar na prática no plantão da mesma semana.
 
-**Comportamento:** Usa muito Google Maps para encontrar lugares, mas se frustra com resultados desatualizados ou genéricos vindos de Brasília inteira. Faz parte de grupos de WhatsApp do condomínio onde pede indicação de "pediatra bom", "marido pra consertar torneira", "padaria com pão de queijo decente". Compra online o que pode, mas valoriza ir a lugares físicos perto de casa.
+**P3 — Estudante de medicina (aluno secundário)**
+20–26 anos, orçamento apertado, muito sensível a preço e a prova social.
+- **Precisa:** assistir uma aula de amostra antes de comprar; parcelar.
+- **Teme:** que seja conteúdo de internet reembalado.
 
-**Dores:**
-- Não conhece a maioria dos comércios novos que abriram nos últimos 2 anos
-- Não tem tempo de procurar — quer resposta rápida no celular
-- Não confia em avaliação genérica do Google (acha que tem muito review falso)
+**P4 — Professor convidado (não é usuário do sistema)**
+Colega que grava um módulo. Aparece como autor, com nome, foto, titulação e CRM.
+A Dra. sobe o material por ele. **Decisão D1:** não tem login.
 
-**Ganhos buscados:**
-- Encontrar opções perto de casa em menos de 1 minuto
-- Saber se o lugar está aberto AGORA antes de sair
-- Ter prova social de outros moradores da própria região
+**P5 — Álvaro (desenvolvedor / operador)**
+Mantém, evolui e monitora. Precisa de logs, de webhook confiável e de um jeito simples de
+liberar acesso na mão quando o pagamento der problema.
 
-**Como ela chega ao produto:** Indicação no grupo de WhatsApp do condomínio, busca no Google por "[serviço] jardim botânico df", ou tropeça no Instagram da nossa marca.
+### 1.4 Jornadas
 
-#### Persona 2 — Roberto, 47, dono de pet shop no JK
-
-**Demografia:** Pet shop pequeno (3 funcionários), abriu há 5 anos, faturamento R$30-50k/mês, não tem formação em marketing, posta esporadicamente no Instagram da loja (consegue 200-400 seguidores locais).
-
-**Comportamento:** Trabalha de balcão e gestão. Não tem tempo nem dinheiro para agência. Já contratou "menino que faz site" 2 vezes e nunca ficou pronto. Usa muito WhatsApp para receber pedidos. Acredita que a maior parte dos clientes vem por indicação ou por passar em frente.
-
-**Dores:**
-- Sente que está "invisível" no digital comparado a redes maiores
-- Não sabe medir o que funciona
-- Já gastou dinheiro em "tráfego pago" que não trouxe cliente
-- Não tem certeza se vale a pena ter site, perfil no Google Meu Negócio bem feito, etc.
-
-**Ganhos buscados:**
-- Aparecer quando o vizinho buscar "pet shop perto de mim"
-- Pagar pouco e ter resultado mensurável (visitas, contatos via WhatsApp)
-- Não ter que mexer em tecnologia complicada
-- Ter alguém local para conversar quando der problema
-
-**Como ele chega ao produto:** Você bate na porta dele com um tablet mostrando o perfil dele já pronto no Achei (importado via Places API), e oferece reivindicar e fazer upgrade.
-
-#### Persona 3 — Beatriz, 28, estudante e moradora recém-chegada
-
-**Demografia:** Solteira, mora em apartamento alugado, estudante de pós-graduação UnB, mudou-se para o JBT há 3 meses, renda própria R$4k/mês.
-
-**Comportamento:** Está descobrindo o bairro. Usa muito TikTok e Instagram para descobrir lugares. Não tem rede de contatos locais ainda. Mais nativa digital — espera UI moderna, foto bem feita, informação clara.
-
-**Dores:**
-- Não conhece ninguém ainda no bairro para pedir indicação
-- Quer descobrir cafeterias, restaurantes, lugares para trabalhar com notebook
-- Não confia em estabelecimento que não tem presença digital decente
-
-**Ganhos buscados:**
-- Sentir-se "em casa" descobrindo o bairro
-- Encontrar lugares que combinam com seu estilo (vegano, café especial, ambiente de trabalho)
-- Compartilhar achados nas redes (potencial criadora de UGC)
-
-**Como ela chega ao produto:** SEO orgânico — "melhores cafés jardim botânico brasília", Instagram da marca, indicação de outro recém-chegado.
-
-#### Persona 4 — Você (Álvaro), admin/curador
-
-> Persona crítica e geralmente esquecida em produtos solo: o operador.
-
-**Necessidades como operador:**
-- Painel administrativo para aprovar reivindicações
-- Importação em massa via Places API com 1 clique
-- Visão financeira (assinaturas ativas, MRR, churn)
-- Capacidade de criar/editar negócios manualmente quando a API falha
-- Logs de auditoria (quem mexeu em quê)
-
-### 1.4 Jornadas de Usuário
-
-#### Jornada Marina (descoberta espontânea)
-
+**Jornada da Dra. — publicar um curso novo**
 ```
-1. Precisa de cabeleireiro infantil para filho
-2. Pesquisa no Google "cabeleireiro infantil jardim botanico df"
-3. Encontra link do Achei no top 3 (SEO local otimizado)
-4. Acessa página da categoria "Salão / Cabeleireiro"
-5. Filtra por "atende crianças" + ordena por distância
-6. Vê 3 opções com foto, avaliação, horário de hoje, link WhatsApp
-7. Clica em "Abrir WhatsApp" → conversa com o salão
-8. Agenda
-9. Eventualmente avalia/recomenda dentro do Achei
+Login → Painel → Novo curso → título, capa, descrição, preço, professor
+  → Criar módulo 1 → Criar aula 1 → arrastar o .mp4 (upload direto p/ Cloudflare)
+  → anexar slides (.pdf) → salvar
+  → repetir aulas/módulos
+  → Pré-visualizar como aluno → Publicar
+  → Copiar link da página de vendas → divulgar no Instagram
 ```
 
-#### Jornada Roberto (de descoberto a anunciante)
-
+**Jornada do aluno — da descoberta ao certificado**
 ```
-1. Você bate na porta do pet shop com o tablet
-2. Mostra: "Olha, seu pet shop já tá listado aqui no Achei do Jardim Botânico"
-3. Roberto vê o perfil dele (importado via Places API: nome, endereço, foto antiga do Google)
-4. Você: "Sem custo nenhum hoje. Quer reivindicar para personalizar?"
-5. Roberto reivindica (cria conta com email + CNPJ + telefone)
-6. Você ajuda ele a colocar uma foto melhor, descrição, WhatsApp direto
-7. 2 semanas depois você volta: "Olha o relatório de visualizações do seu perfil"
-8. Mostra que ele teve 47 visualizações, 8 cliques no WhatsApp
-9. Oferta: "Por R$79/mês, você fica em destaque na categoria, aparece primeiro, e eu tiro foto profissional do seu pet shop"
-10. Roberto fecha
-11. Cliente pago e ativo
+Instagram/Google → Landing page → Página do curso → assiste aula gratuita de amostra
+  → Comprar → cria conta (e-mail + senha ou Google) → Checkout Stripe → paga
+  → Webhook cria matrícula → e-mail "acesso liberado"
+  → Área do aluno → Sala de aula → assiste, marca concluída, baixa material
+  → 100% concluído → Certificado em PDF → compartilha no LinkedIn
 ```
 
-#### Jornada Beatriz (descoberta de lifestyle)
-
+**Jornada de exceção — pagou e não recebeu acesso**
 ```
-1. Acabou de se mudar, quer descobrir cafeterias
-2. Vê post no Instagram do @acheinojardimbotanico ("Top 5 cafés do bairro")
-3. Clica no link da bio → página de cafeterias do Achei
-4. Lê descrição editorial curta de cada uma
-5. Salva 3 que parecem interessantes
-6. Vai conhecer
-7. Volta no app e curte / avalia
-8. Compartilha o achado no story dela
-9. Vira eventual evangelista
+Aluno paga → webhook falha → aluno reclama no WhatsApp
+  → Dra. abre Painel → Matrículas → Liberar acesso manual
+  → aluno recebe e-mail → resolvido em 1 minuto, sem código
 ```
 
 ---
 
-## Parte 2 — Jobs to Be Done
+## Parte 2 — Atores e permissões
 
-### 2.1 Job Statements
-
-#### Para Marina (consumidor estabelecido)
-> **Quando** preciso de um produto ou serviço próximo de casa, **eu quero** encontrar opções confiáveis em menos de 1 minuto sem peneirar resultados genéricos, **para que** eu economize tempo, não erre a escolha e me sinta segura comprando local.
-
-#### Para Roberto (comerciante local)
-> **Quando** percebo que estou ficando invisível no digital enquanto os concorrentes maiores aparecem, **eu quero** ter presença online profissional sem ter que aprender marketing nem contratar agência cara, **para que** novos moradores do bairro me encontrem e eu aumente meu faturamento sem mudar o que sei fazer.
-
-#### Para Beatriz (consumidor recém-chegado)
-> **Quando** estou em um bairro novo sem rede de contatos, **eu quero** descobrir lugares que combinam com meu estilo de vida, **para que** eu me sinta pertencente à região e construa minha rotina sem depender de tentativa e erro.
-
-### 2.2 Dimensões do Job (Marina como exemplo aprofundado)
-
-**Job Funcional:** Encontrar negócio adequado próximo, rapidamente.
-
-**Job Emocional:** Sentir-se *no controle* (não desperdiçando tempo nem dinheiro), sentir-se *parte da comunidade* (apoiando comércio local), sentir-se *competente* (sabendo onde ir).
-
-**Job Social:** Ser percebida pela rede dela como alguém que "conhece o bairro", que "sabe dos lugares bons", e poder indicar para vizinhos com confiança.
-
-> Observação crítica: marketing comum só fala do funcional. O diferencial real do Achei é tocar nos jobs emocional e social — por isso curadoria humana e identidade visual hiperlocal são features estratégicas, não estéticas.
-
-### 2.3 Forces of Progress (modelo Bob Moesta)
-
-Quatro forças decidem se Marina contrata ou rejeita o produto:
-
-| Força | Direção | Como aparece |
+| Papel | Quem é | Pode |
 |---|---|---|
-| **Push** (do problema) | A favor | Frustração com Google Maps mostrar negócios fechados / longe / sem foto |
-| **Pull** (da solução) | A favor | Achei tem foto bonita, info atual, WhatsApp direto |
-| **Anxiety** (medo da nova solução) | Contra | "Será que essas avaliações são reais?" "Vou ter que criar mais uma conta?" |
-| **Habit** (apego ao antigo) | Contra | Já é viciada em digitar no Google Maps |
+| `ADMIN` | Dra. Karollyne | Tudo: cursos, aulas, materiais, alunos, matrículas, cupons, pedidos, configurações |
+| `EQUIPE` | Secretária/editor (futuro) | Criar e editar conteúdo; **não** vê faturamento nem dados de pagamento |
+| `ALUNO` | Quem comprou ou recebeu cortesia | Vê apenas os cursos em que tem matrícula **ATIVA** |
+| *(visitante)* | Não autenticado | Landing, catálogo, página de curso, aulas gratuitas, validação de certificado |
 
-**Implicação para o produto:**
-- **Reforçar push:** Não tentamos competir com Google Maps em volume. Mostramos onde ele falha (info desatualizada, sem filtro local).
-- **Reforçar pull:** Investir em foto e curadoria visível desde a primeira tela.
-- **Reduzir anxiety:** Usar reviews do Google integrados (familiares) + selo de "verificado pessoalmente pela equipe".
-- **Quebrar habit:** SEO forte para que a busca natural dela ("cafeteria jardim botânico") já caia no Achei, não exija mudar comportamento.
-
-### 2.4 Job statement para o produto (orientador maior)
-
-> Para o **morador** do Jardim Botânico, quando ele precisa **resolver uma necessidade local**, o Achei é a primeira parada porque **economiza tempo, fortalece a comunidade e dá segurança na escolha**.
->
-> Para o **comerciante** do Jardim Botânico, quando ele quer **crescer sem aprender marketing**, o Achei é a opção mais simples porque **ele só paga, a gente entrega presença digital com foto, descrição e visibilidade real para vizinhos**.
+**Regra de ouro:** o que separa aluno de visitante é a **matrícula**, não o login.
+Estar logado não dá acesso a nada — a matrícula ativa dá.
 
 ---
 
-## Parte 3 — Análise estratégica
+## Parte 3 — Jobs to Be Done
 
-### 3.1 Lean Canvas
+### 3.1 Job statements
 
-| Bloco | Conteúdo |
+**Dra. Karollyne**
+> Quando eu termino de gravar um módulo novo, quero publicá-lo sozinha em minutos, para que
+> eu não dependa de terceiros e possa manter meu ritmo de produção.
+
+> Quando um aluno me manda mensagem perguntando "onde está o material da aula 3?", quero que
+> ele encontre sozinho, para que eu não vire suporte técnico do meu próprio curso.
+
+**Médico / residente**
+> Quando eu tenho 20 minutos livres no plantão, quero retomar exatamente de onde parei no
+> celular, para que o tempo fragmentado ainda vire aprendizado.
+
+> Quando eu termino um curso, quero um certificado com carga horária e validação, para que
+> eu possa comprovar em processo seletivo e no currículo Lattes.
+
+**Estudante**
+> Quando eu estou decidindo se compro, quero assistir uma aula real antes, para que eu não
+> sinta que estou comprando no escuro.
+
+### 3.2 Forças do progresso (Bob Moesta)
+
+| Força | O que é, neste caso |
 |---|---|
-| **Problema** | (1) Moradores não encontram negócios locais com info confiável. (2) Comerciantes não têm presença digital boa nem dinheiro/tempo para agência. (3) Indicações ficam perdidas em grupos de WhatsApp. |
-| **Segmentos** | Primário: moradores Jardim Botânico/Lago Sul/São Sebastião. Secundário: comerciantes locais com 1-10 funcionários. |
-| **Proposta Única** | Guia comercial hiperlocal curado, com foto profissional e contato direto. |
-| **Solução** | Plataforma web mobile-first com listagem por categoria/distância, perfil rico, integração WhatsApp, painel do anunciante. |
-| **Canais** | SEO local, Instagram (@acheinojardimbotanico), QR code físico em estabelecimentos parceiros, boca a boca de moradores. |
-| **Receita** | Assinatura de anunciantes em 3 planos (Free / Visibilidade R$79 / Premium R$197). Sem comissão por transação. |
-| **Custos** | Domínio + hospedagem Vercel (~R$50/mês), Google Places API (~R$0 dentro do free tier), MySQL (~R$30/mês), tempo do operador. |
-| **Métricas-Chave** | (1) Negócios listados, (2) Negócios reivindicados, (3) Anunciantes pagos, (4) MRR, (5) Sessões orgânicas/mês, (6) Cliques no WhatsApp. |
-| **Vantagem injusta** | Curadoria local manual + foto profissional + você é morador (e dev) — combinação rara. |
+| **Empurra** (dor atual) | Material espalhado em drives e WhatsApp; conteúdo bom mas desorganizado; ela perde vendas por não ter onde vender |
+| **Puxa** (atração) | Marca própria, alunos próprios, receita direta, autoridade consolidada |
+| **Ansiedade** | "E se o vídeo vazar?" "E se o aluno pagar e não conseguir entrar?" "E se der problema e eu não souber resolver?" |
+| **Hábito** | O jeito atual (mandar link do drive) funciona *mais ou menos* e não custa nada |
 
-### 3.2 Análise competitiva
-
-| Concorrente | Força | Fraqueza | Como nos diferenciamos |
-|---|---|---|---|
-| **Google Maps** | Onipresente, gratuito, confiável | Genérico (todo Brasil), sem curadoria, sem identidade de bairro | Hiperlocal, identidade visual de bairro, curadoria editorial |
-| **Instagram dos comércios** | Visual, social | Cliente precisa saber o nome antes | Descoberta por categoria + proximidade |
-| **Grupos de WhatsApp** | Confiança alta (indicação de vizinho) | Informação perdida, não pesquisável | Persistência + busca + organização |
-| **acheisantamaria.com.br** | Modelo provado | UX dos anos 2010, sem foto profissional, plano único | UI moderna, plano premium com foto, painel do anunciante decente |
-| **Sympla / Eventbrite** | Eventos | Não cobre comércio | Sem competição direta |
-| **iFood / Rappi** | Delivery de comida | Cobra comissão alta, só restaurantes | Não cobramos comissão, cobre todas categorias |
-
-### 3.3 Modelo de monetização
-
-**Plano Free** (gratuito)
-- Listagem básica importada via Places API
-- Aparece nas buscas, mas ordenado após pagos
-- Sem foto profissional, sem destaque visual
-
-**Plano Visibilidade — R$79/mês**
-- Destaque na categoria (aparece antes dos free)
-- Descrição personalizada
-- Link direto para WhatsApp
-- Galeria com até 6 fotos
-- Relatório mensal de visualizações
-
-**Plano Premium — R$197/mês**
-- Tudo do Visibilidade
-- **Foto profissional** tirada pelo operador (você tem câmera)
-- Banner rotativo na home da região
-- Aparece em destaque na categoria com selo "Premium"
-- Galeria com até 20 fotos
-- Posto no Instagram mensal feito por você
-
-**Projeção realista de 12 meses:**
-
-```
-Mês 1-2:  0 anunciantes pagos (importação + reivindicações grátis)
-Mês 3:    3 anunciantes pagos (~R$237 MRR)
-Mês 6:    10 anunciantes pagos (~R$790 MRR)
-Mês 12:   25 anunciantes pagos (~R$2.500 MRR)
-Mês 18:   50 anunciantes pagos (~R$5.000 MRR)
-```
-
-Esse é o teto realista para uma região. Para escalar além, replicar o modelo em outras regiões (Lago Sul, Sudoeste, Águas Claras) — cada uma é um vertical próprio.
+**Implicação de produto:** as duas ansiedades principais — vazamento de conteúdo e falha no
+acesso — viram **requisitos de primeira classe**, não "melhorias futuras". Ver Parte 7.
 
 ---
 
-## Parte 4 — Feature Canvas + MVP
+## Parte 4 — Domínio e vocabulário
 
-### 4.1 Brainstorm de features (sem filtro)
+### 4.1 Glossário
+
+| Termo | Significado |
+|---|---|
+| **Curso** | Produto vendável. Tem preço, capa, descrição, autor e uma trilha de módulos |
+| **Módulo** | Agrupamento ordenado de aulas dentro de um curso |
+| **Aula** | Unidade de consumo. Tem um vídeo (ou texto/PDF) e materiais anexos |
+| **Material** | Arquivo de apoio: slide, PDF, planilha, link. Vive na aula ou no curso |
+| **Matrícula** | Vínculo entre um aluno e um curso. **É o que dá acesso.** |
+| **Progresso** | Registro de quanto o aluno assistiu de cada aula |
+| **Certificado** | PDF emitido ao concluir o curso, com código de validação pública |
+| **Professor** | Autor exibido do curso. Metadado, **não** é usuário do sistema |
+| **Pedido** | Registro de uma tentativa de compra e seu status no Stripe |
+| **Cortesia** | Matrícula criada manualmente pela Dra., sem pagamento |
+| **Aula gratuita** | Aula marcada como amostra, acessível sem matrícula |
+
+### 4.2 Hierarquia
 
 ```
-[ Descoberta pública ]
-- Listagem por categoria
-- Listagem por proximidade (geolocalização)
-- Busca textual
-- Filtros (aberto agora, aceita pet, tem estacionamento, etc)
-- Mapa interativo
-- Página de detalhe do negócio
-- Galeria de fotos
-- Botão WhatsApp direto
-- Botão ligar
-- Botão "como chegar"
-- Avaliações do Google integradas
-- Avaliações próprias do Achei
-- Posts de destaque editorial
-- Página de "novidades do bairro"
-
-[ Painel do anunciante ]
-- Cadastro / Login
-- Reivindicação de perfil existente
-- Edição de descrição
-- Upload de fotos
-- Configuração de horário
-- Configuração de WhatsApp
-- Relatório de métricas
-- Página de plano e pagamento
-- Histórico de cobranças
-
-[ Importação e admin ]
-- Importação via Google Places API
-- Sincronização periódica
-- Painel administrativo
-- Aprovação de reivindicações
-- Moderação de avaliações
-- Criação manual de negócio
-- Logs de auditoria
-
-[ Marketing e SEO ]
-- Páginas otimizadas para SEO local
-- Schema.org markup
-- Sitemap
-- Compartilhamento social com Open Graph
-- Newsletter mensal
-
-[ Pagamento ]
-- Checkout assinatura
-- Integração Stripe ou Asaas (Brasil)
-- Faturas
-- Cancelamento
-
-[ Comunidade ]
-- Sistema de avaliações próprio
-- Comentários
-- Salvos / favoritos
-- Compartilhar lista personalizada
-- Sugerir novo negócio
+Curso
+ └── Módulo (ordem)
+      └── Aula (ordem)
+           └── Material[]        ← slides, PDFs, planilhas
+Curso
+ └── Material[]                  ← materiais gerais (ementa, bibliografia)
 ```
 
-### 4.2 Revisão Técnica × UX × Negócio (cada feature)
+### 4.3 Estados
 
-> Cada feature recebe três notas (1-5): viabilidade técnica, valor para usuário, valor para negócio. Features com nota < 3 em qualquer dimensão saem do MVP.
+**Curso**
+```
+RASCUNHO ──publicar──> PUBLICADO ──arquivar──> ARQUIVADO
+              ↑                                     │
+              └──────────── republicar ─────────────┘
+```
+Curso `RASCUNHO` não aparece no catálogo e não pode ser comprado.
+Curso `ARQUIVADO` some do catálogo, mas **quem já tem matrícula continua acessando**.
 
-| Feature | Téc | UX | Neg | No MVP? |
-|---|---|---|---|---|
-| Listagem por categoria | 5 | 5 | 5 | ✅ |
-| Listagem por proximidade | 4 | 5 | 4 | ✅ |
-| Busca textual | 4 | 4 | 4 | ✅ |
-| Filtros básicos (aberto agora) | 4 | 4 | 3 | ✅ |
-| Mapa interativo | 3 | 4 | 3 | ⚠️ v2 |
-| Página de detalhe | 5 | 5 | 5 | ✅ |
-| Galeria de fotos | 5 | 5 | 4 | ✅ |
-| Botão WhatsApp direto | 5 | 5 | 5 | ✅ |
-| Avaliações Google integradas | 4 | 5 | 4 | ✅ |
-| Avaliações próprias | 3 | 3 | 3 | ❌ v2 |
-| Reivindicação de perfil | 4 | 5 | 5 | ✅ |
-| Painel anunciante (CRUD) | 4 | 4 | 5 | ✅ |
-| Importação Places API | 5 | - | 5 | ✅ |
-| Painel admin | 4 | 3 | 5 | ✅ |
-| Checkout assinatura | 3 | 4 | 5 | ✅ |
-| Métricas para anunciante | 3 | 4 | 4 | ✅ |
-| Posts editoriais | 3 | 3 | 3 | ❌ v2 |
-| Newsletter | 4 | 3 | 3 | ❌ v2 |
-| Sistema próprio de avaliações | 3 | 3 | 2 | ❌ v3 |
-| Comentários | 3 | 2 | 2 | ❌ v3 |
-| Favoritos | 4 | 3 | 2 | ❌ v2 |
+**Matrícula**
+```
+                  ┌──expira (prazo)──> EXPIRADA
+ATIVA ────────────┼──reembolso───────> REEMBOLSADA
+                  └──cancelamento────> CANCELADA
+```
+Uma vez `REEMBOLSADA` ou `CANCELADA`, o acesso é revogado imediatamente.
+Progresso e certificado emitido **são preservados** — histórico não se apaga.
 
-### 4.3 MVP Canvas
-
-**Nome do MVP:** Achei Botânico — Release 1.0
-
-**Objetivo do MVP:** Validar se moradores usam o guia para descoberta local **E** se comerciantes pagam por destaque. Métrica de sucesso em 90 dias: 5 anunciantes pagos OU 1.000 sessões orgânicas/mês.
-
-**Segmento de cliente:** Inicial — moradores Jardim Botânico (Marina + Beatriz). Comerciantes locais (Roberto).
-
-**Jornada principal a validar:** Marina pesquisa no Google → encontra Achei → clica em WhatsApp do estabelecimento → estabelecimento reconhece o lead.
-
-**Features do MVP** (saída do filtro acima):
-1. Listagem por categoria
-2. Listagem por proximidade (geolocalização opcional)
-3. Busca textual
-4. Filtro "aberto agora"
-5. Página de detalhe com galeria + WhatsApp
-6. Importação via Places API (1ª carga)
-7. Cadastro/login
-8. Reivindicação de perfil
-9. Painel do anunciante básico (editar descrição, foto, WhatsApp)
-10. Painel admin (aprovar, importar, criar manual)
-11. Checkout assinatura (1 plano só no MVP — Visibilidade R$79)
-12. Métricas básicas para anunciante
-
-**Resultado esperado:** Conseguir vender 5 assinaturas em 90 dias com tráfego inicial de boca a boca + SEO inicial.
-
-**Custo estimado de construção:** 8-12 semanas no ritmo de 1h/dia + sábados.
-
-### 4.4 Sequencer (sequenciamento em releases)
-
-**Release 0 — Project Base (semana 0-1)**
-Limpeza do Courtesyfy + setup Spec-Kit + auth básico + estrutura genérica.
-
-**Release 1 — Public Read-only (semana 2-3)**
-Importação Places API + listagem pública + página de detalhe + WhatsApp.
-*Saída: site público funcional com 200+ negócios listados, mesmo sem nenhum anunciante.*
-
-**Release 2 — Claim & Manage (semana 4-5)**
-Cadastro/login + reivindicação + painel do anunciante (free) + painel admin.
-*Saída: comerciante pode reivindicar e editar perfil free.*
-
-**Release 3 — Monetize (semana 6-8)**
-Checkout assinatura + plano Visibilidade + métricas.
-*Saída: aceita pagamento de R$79/mês.*
-
-**Release 4 — Polish & Scale (semana 9-12)**
-SEO técnico avançado + Open Graph + sitemap + filtros adicionais + Premium tier.
-*Saída: 1.000+ sessões/mês orgânicas.*
-
-**Pós-MVP (v2):** Mapa interativo, avaliações próprias, posts editoriais, favoritos, newsletter, Instagram automation.
+**Pedido**
+```
+PENDENTE ──pagamento aprovado──> PAGO ──reembolso──> REEMBOLSADO
+    └──falha/expirou──> FALHOU
+```
 
 ---
 
-## Parte 5 — Spec-Driven Development setup
+## Parte 5 — Requisitos funcionais
 
-### 5.1 Estrutura de pastas (no repositório)
+Cada épico traz os requisitos e os **critérios de aceite** que vamos usar para dizer
+"está pronto". `[MVP]` entra no primeiro release; `[v1.1]` fica para depois.
 
-```
-/
-├── .specify/                           # config do Spec-Kit
-│   └── memory/
-│       └── constitution.md             # princípios invioláveis
-├── specs/                              # specs ativas
-│   ├── 000-project-base/
-│   │   ├── spec.md                     # /speckit.specify output
-│   │   ├── plan.md                     # /speckit.plan output
-│   │   └── tasks.md                    # /speckit.tasks output
-│   ├── 001-places-import/
-│   ├── 002-public-listing/
-│   ├── 003-business-detail/
-│   ├── 004-auth/
-│   ├── 005-claim-business/
-│   ├── 006-advertiser-panel/
-│   ├── 007-admin-panel/
-│   └── 008-checkout-visibility/
-├── docs/
-│   ├── adr/                            # Architecture Decision Records
-│   │   ├── 0001-stack-choice.md
-│   │   ├── 0002-database-choice.md
-│   │   ├── 0003-auth-strategy.md
-│   │   └── 0004-places-api-vs-scraping.md
-│   ├── discovery/
-│   │   ├── lean-inception.md           # este documento
-│   │   ├── personas.md
-│   │   └── jobs-to-be-done.md
-│   └── runbooks/                       # operação
-│       └── places-api-import.md
-├── src/                                # código (Next.js)
-├── prisma/                             # schema
-└── README.md
-```
+### E1 — Contas e autenticação `[MVP]`
 
-### 5.2 Template de spec (vamos usar em cada feature)
+- RF1.1 Cadastro de aluno com nome, e-mail e senha, com verificação de e-mail por código
+- RF1.2 Login social com Google (reduz atrito no checkout)
+- RF1.3 Recuperação de senha por e-mail
+- RF1.4 Perfil do aluno: nome, foto, telefone e **CPF** (necessário para o certificado)
+- RF1.5 Papéis `ADMIN` / `ALUNO`; o primeiro usuário, criado por seed, é a Dra.
+- RF1.6 `[v1.1]` Limite de sessões simultâneas por conta (antipirataria)
 
-```markdown
-# Spec NNN — [Nome da Feature]
+**Critérios de aceite**
+- Um aluno cria conta, verifica e-mail e loga em menos de 2 minutos
+- Um aluno sem matrícula que acessa `/aluno/curso/x` é redirecionado — nunca vê conteúdo
+- Um `ALUNO` que acessa qualquer rota `/admin/*` recebe 404 ou redirect, nunca a tela
 
-## Contexto
-Por que essa feature existe? Qual job ela atende? Qual persona se beneficia?
+### E2 — Catálogo e página de vendas do curso `[MVP]`
 
-## Critérios de aceite
-- [ ] Lista funcional clara, testável, sem ambiguidade
-- [ ] Cada item deve ser verdadeiro ou falso, não "mais ou menos"
+- RF2.1 Catálogo público em `/cursos` com busca e filtro por categoria e nível
+- RF2.2 Página do curso em `/cursos/[slug]`: capa, trailer, descrição, o que vai aprender,
+  ementa completa (módulos e aulas com duração), professor, depoimentos, FAQ, preço, CTA
+- RF2.3 Aula de amostra reproduzível sem login
+- RF2.4 SEO: metadados Open Graph, título e descrição por curso, sitemap
+- RF2.5 Contador de matriculados (prova social), habilitável por curso
 
-## Não-objetivos
-O que essa feature EXPLICITAMENTE não faz, para evitar scope creep.
+**Critérios de aceite**
+- A ementa mostra todas as aulas mesmo para quem não comprou, com cadeado nas bloqueadas
+- Compartilhar o link no WhatsApp gera preview com capa e título corretos
 
-## Fluxos
-### Fluxo principal (happy path)
-Passo a passo, do clique inicial ao estado final.
+### E3 — Checkout e matrícula `[MVP]`
 
-### Fluxos de exceção
-O que acontece se a API falhar? Se o usuário desistir no meio?
+- RF3.1 Botão comprar → login/cadastro (se preciso) → Stripe Checkout Session
+- RF3.2 Webhook `checkout.session.completed` cria `Pedido` PAGO + `Matricula` ATIVA de forma
+  **idempotente** — reprocessar o mesmo evento não duplica matrícula
+- RF3.3 E-mail transacional de acesso liberado, com link direto para a sala de aula
+- RF3.4 Página de sucesso pós-pagamento levando direto ao curso
+- RF3.5 Webhook `charge.refunded` → matrícula `REEMBOLSADA`, acesso revogado
+- RF3.6 Liberação manual de matrícula pelo painel (cortesia, venda no WhatsApp, correção)
+- RF3.7 `[v1.1]` Cupons de desconto (percentual e valor fixo, com limite de uso e validade)
+- RF3.8 `[v1.1]` PIX e parcelamento — **depende de confirmação da conta Stripe BR** (Parte 15)
 
-## Modelo de dados afetado
-Tabelas criadas, alteradas, relações.
+**Critérios de aceite**
+- Pagar com cartão de teste libera o acesso em menos de 10 segundos
+- Reenviar o mesmo evento de webhook não cria uma segunda matrícula
+- Um reembolso feito no painel do Stripe tira o acesso do aluno sem intervenção manual
 
-## Contratos de API
-Endpoints, payloads, status codes.
+### E4 — Sala de aula (área de membros) `[MVP]`
 
-## Dependências
-Outras specs, serviços externos, libs.
+- RF4.1 `/aluno` lista os cursos com matrícula ativa e o percentual concluído
+- RF4.2 Sala de aula com sidebar de módulos/aulas + player central + abas de material
+- RF4.3 Player Cloudflare Stream com URL assinada, expiração curta e retomada de posição
+- RF4.4 Marcar aula como concluída — automático ao atingir 90% do vídeo, e manual
+- RF4.5 Botão "próxima aula" e navegação por teclado
+- RF4.6 Download/visualização de materiais via rota autenticada com URL temporária
+- RF4.7 Barra de progresso do curso e destaque de "continuar de onde parou"
+- RF4.8 Marca d'água dinâmica sobre o vídeo com nome e e-mail do aluno
+- RF4.9 Responsivo de verdade: a sala de aula precisa funcionar bem no celular
+- RF4.10 `[v1.1]` Comentários e dúvidas por aula, com resposta da Dra.
+- RF4.11 `[v1.1]` Anotações pessoais com marcação de tempo do vídeo
 
-## Métricas de sucesso
-Como saber que a feature está cumprindo seu papel?
+**Critérios de aceite**
+- Copiar a URL do vídeo e abrir em aba anônima **não** reproduz
+- Fechar o navegador no meio da aula e voltar depois retoma no mesmo segundo
+- Um PDF baixado tem o e-mail do aluno carimbado no rodapé
 
-## Riscos
-O que pode dar errado tecnicamente ou de produto.
-```
+### E5 — Painel da Dra. (produção de conteúdo) `[MVP]`
 
-### 5.3 Workflow no Claude Code
+- RF5.1 CRUD de curso: dados, capa, preço, tipo de acesso, professor, categoria, status
+- RF5.2 CRUD de módulo e aula com reordenação por arrastar
+- RF5.3 Upload de vídeo direto do navegador para o Cloudflare Stream, com barra de progresso
+- RF5.4 Upload de materiais (PDF, slide, planilha) para armazenamento privado
+- RF5.5 Pré-visualização "ver como aluno" antes de publicar
+- RF5.6 Publicar / despublicar curso e aula individualmente
+- RF5.7 CRUD de professores convidados (nome, foto, titulação, CRM/RQE, bio)
+- RF5.8 CRUD de depoimentos de alunos, com aprovação
+- RF5.9 Configurações da plataforma: logo, cores, textos da landing, contato, redes
 
-A cada feature nova, no Claude Code:
+**Critérios de aceite**
+- A Dra. publica uma aula nova com vídeo e slide sem abrir nada além do painel
+- Um vídeo de 1 GB sobe sem estourar limite de servidor
+- Nenhuma ação de conteúdo exige linha de comando ou ajuda do desenvolvedor
 
-```bash
-# 1. Constitution (1x no início do projeto)
-/speckit.constitution
+### E6 — Gestão de alunos `[MVP]`
 
-# 2. Para cada feature
-/speckit.specify "Importar negócios do Google Places API para o banco
-                  na região do Jardim Botânico"
-# → gera specs/001-places-import/spec.md
+- RF6.1 Lista de alunos com busca por nome, e-mail e CPF
+- RF6.2 Ficha do aluno: cursos, progresso, pedidos, certificados, último acesso
+- RF6.3 Conceder ou revogar matrícula manualmente
+- RF6.4 Reenviar e-mail de acesso
+- RF6.5 Exportar lista de alunos em CSV
 
-/speckit.plan
-# → gera specs/001-places-import/plan.md com decisões técnicas
+### E7 — Certificado `[MVP]`
 
-/speckit.tasks
-# → gera specs/001-places-import/tasks.md com tarefas atômicas
+- RF7.1 Emissão automática ao atingir o percentual mínimo de conclusão (padrão 100%)
+- RF7.2 PDF com nome do aluno, CPF, curso, carga horária, data e código de validação
+- RF7.3 Página pública `/certificados/[codigo]` para conferência por terceiros
+- RF7.4 Dados do certificado congelados na emissão (snapshot) — mudar o curso depois não
+  altera certificados já emitidos
+- RF7.5 Reemissão pelo aluno a qualquer momento, mantendo o mesmo código
 
-/speckit.implement
-# → executa as tarefas, abrindo PRs
-```
+**Critérios de aceite**
+- Quem recebe o certificado valida o código sem ter conta na plataforma
+- Renomear o curso não muda o nome impresso em certificados antigos
 
-A spec é commitada *antes* do código. Se a implementação divergir, atualiza-se a spec.
+### E8 — Landing page `[MVP]`
 
-### 5.4 ADRs — Architecture Decision Records
+Detalhada na Parte 10.
 
-Cada decisão arquitetural importante vira um arquivo curto em `docs/adr/`. Template:
+### E9 — E-mails transacionais `[MVP]`
 
-```markdown
-# ADR-NNNN: [Decisão]
+Verificação de e-mail · Recuperação de senha · Acesso liberado (pós-compra) ·
+Certificado disponível · `[v1.1]` Aviso de curso novo · `[v1.1]` Lembrete de curso parado
 
-## Status
-Proposto | Aceito | Substituído por ADR-XXXX
+### E10 — Painel de resultados `[MVP básico]`
 
-## Contexto
-Por que essa decisão precisa ser tomada?
-
-## Decisão
-O que foi decidido?
-
-## Consequências
-Trade-offs: o que ganhamos e o que perdemos com essa escolha?
-
-## Alternativas consideradas
-Quais opções foram avaliadas e por que foram descartadas?
-```
-
-ADRs iniciais que vamos escrever no Release 0:
-
-- ADR-0001: Stack escolhido (Next.js + TypeScript + Prisma + MySQL)
-- ADR-0002: Banco MySQL vs PostgreSQL
-- ADR-0003: Estratégia de autenticação (NextAuth + email/senha + Google)
-- ADR-0004: Places API vs Web Scraping
-- ADR-0005: Estratégia de cache (ISR + DB cache)
-- ADR-0006: Provedor de pagamento (Asaas vs Stripe vs MercadoPago)
-- ADR-0007: Hospedagem de imagens (Vercel Blob vs S3 vs Cloudinary)
-- ADR-0008: Estrutura multi-tenant (single-tenant por região)
+- RF10.1 Cards: alunos ativos, matrículas no mês, faturamento no mês, taxa de conclusão
+- RF10.2 Gráfico de vendas por período (`recharts` já está no projeto)
+- RF10.3 `[v1.1]` Retenção por aula — onde os alunos param de assistir
 
 ---
 
-## Parte 6 — Arquitetura técnica
+## Parte 6 — Requisitos não funcionais
 
-### 6.1 Stack
+| # | Requisito | Alvo |
+|---|---|---|
+| RNF1 | **Mobile-first** | A sala de aula é usada majoritariamente no celular. Nenhuma tela pode quebrar abaixo de 375px |
+| RNF2 | **Performance** | LCP < 2,5s na landing e na página do curso. Player inicia em < 3s |
+| RNF3 | **Proteção do conteúdo** | Nenhum vídeo ou material acessível por URL direta sem verificação de matrícula |
+| RNF4 | **Disponibilidade** | Vercel + Cloudflare. Falha do banco não pode derrubar a landing (estático/ISR) |
+| RNF5 | **LGPD** | Política de privacidade, base legal declarada, exclusão de conta sob pedido, retenção definida |
+| RNF6 | **Acessibilidade** | Contraste AA, navegação por teclado na sala de aula, legendas nos vídeos (meta v1.1) |
+| RNF7 | **SEO** | Landing e páginas de curso indexáveis, com dados estruturados `Course` do schema.org |
+| RNF8 | **Observabilidade** | Log de eventos de negócio (matrícula, pagamento, certificado) + alerta de webhook falho |
+| RNF9 | **Backup** | Backup diário do banco com retenção de 30 dias |
+| RNF10 | **Custo previsível** | Alerta quando o consumo de minutos entregues do Stream passar do orçado |
 
-```
-Frontend:     Next.js 15 (App Router) + TypeScript + Tailwind + shadcn/ui
-Backend:      Next.js API Routes (route handlers) + tRPC opcional
-ORM:          Prisma
-Database:     MySQL (compatível com PlanetScale ou MySQL gerenciado)
-Auth:         NextAuth.js v5 (email/senha + Google OAuth)
-Pagamento:    Asaas (PIX, cartão, boleto — focado no Brasil)
-Imagens:      Vercel Blob (simples, baixo custo até escala)
-Email:        Resend
-Observabilidade: Vercel Analytics + Sentry
-Hospedagem:   Vercel
-```
+---
 
-**Justificativa essencial:**
-- **Next.js**: você já domina + bom SEO via SSR/ISR
-- **MySQL** sobre Postgres: você já usa, ecossistema maduro, sem motivo para mudar
-- **NextAuth v5**: padrão para Next.js, suporta os provedores que precisamos
-- **Asaas** sobre Stripe: melhor preço no Brasil, PIX nativo, boleto, sem complicação de câmbio
-- **Vercel Blob** sobre Cloudinary: simples, integrado, suficiente para volume inicial
+## Parte 7 — Regras de negócio invioláveis
 
-### 6.2 Modelo de dados (Prisma schema)
+Estas regras vão para `context/rules.md` e valem para qualquer código escrito no projeto.
+
+1. **A matrícula ativa é o único portão de acesso.** Nenhuma rota de conteúdo confia em
+   sessão, cookie ou parâmetro de URL — sempre consulta a matrícula no servidor.
+2. **Vídeo nunca é servido por URL pública.** Sempre token assinado, com expiração de no
+   máximo 2 horas, gerado no servidor depois de validar a matrícula.
+3. **Material nunca é servido por URL pública.** O download passa por rota autenticada que
+   emite URL temporária de 60 segundos.
+4. **Webhook de pagamento é idempotente.** O identificador da sessão Stripe é único no banco;
+   reprocessar o mesmo evento nunca duplica pedido ou matrícula.
+5. **Certificado emitido é imutável.** Nome, curso, carga horária e data são congelados na
+   emissão — nunca recalculados a partir dos dados atuais.
+6. **Progresso e certificado nunca são apagados** por cancelamento, reembolso ou expiração.
+   Só o acesso é revogado.
+7. **Curso arquivado não tira acesso de quem já comprou.**
+8. **Nenhum dado de cartão passa pela nossa aplicação.** Tudo via Stripe Checkout hospedado.
+9. **Toda mutação relevante gera `LogEvento`** (matrícula, pagamento, publicação, emissão).
+10. **Toda entrada de usuário é validada com Zod** na Server Action ou API Route, sem exceção.
+
+---
+
+## Parte 8 — Modelo de dados
+
+Proposta de schema Prisma. MySQL com `relationMode = "prisma"` (sem foreign keys no banco),
+portanto **todo relacionamento precisa de `@@index` explícito**.
+
+### 8.1 Autenticação (reaproveitado do projeto base)
+
+`User` · `Account` · `Session` · `VerificationToken` · `AuthToken` · `LoginAttempt`
+
+O `User` muda: sai `lojaId`, entra `cpf`, `telefone`, e o enum `Role` passa a ser
+`ADMIN | EQUIPE | ALUNO` com padrão `ALUNO`.
+
+### 8.2 Conteúdo
 
 ```prisma
-// schema.prisma
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "mysql"; url = env("DATABASE_URL") }
+enum StatusCurso     { RASCUNHO PUBLICADO ARQUIVADO }
+enum NivelCurso      { INTRODUTORIO INTERMEDIARIO AVANCADO }
+enum TipoAcesso      { VITALICIO PRAZO_DIAS }
+enum TipoAula        { VIDEO TEXTO PDF }
+enum TipoMaterial    { PDF SLIDE PLANILHA LINK IMAGEM }
 
-// ===================================================
-// AUTH (NextAuth tables)
-// ===================================================
-model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  emailVerified DateTime?
-  name          String?
-  passwordHash  String?
-  role          UserRole @default(VISITOR)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  ownedBusinesses Business[]
-  accounts        Account[]
-  sessions        Session[]
-  claimRequests   ClaimRequest[]
+model Professor {          // autor exibido — NÃO é usuário do sistema
+  id, nome, slug, titulacao, crm, especialidade, bio, fotoUrl, instagram
+  cursos Curso[]
 }
 
-enum UserRole {
-  VISITOR
-  ADVERTISER
-  ADMIN
+model Categoria { id, nome, slug, ordem, cursos Curso[] }
+
+model Curso {
+  id, slug @unique, titulo, subtitulo, descricao @db.Text
+  capaUrl, trailerVideoUid
+  professorId, categoriaId
+  nivel NivelCurso, cargaHorariaMinutos Int
+  precoCentavos Int, precoDeCentavos Int?     // "de/por"
+  stripePriceId String?
+  tipoAcesso TipoAcesso, acessoDias Int?
+  status StatusCurso @default(RASCUNHO), publicadoEm DateTime?
+  emiteCertificado Boolean @default(true)
+  percentualParaCertificado Int @default(100)
+  destaque Boolean, ordem Int
+  modulos, materiais, matriculas, depoimentos, faqs
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@unique([provider, providerAccountId])
+model Modulo {
+  id, cursoId, titulo, descricao, ordem
+  liberacaoDias Int?     // drip content — v1.1
+  aulas Aula[]
 }
 
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Aula {
+  id, moduloId, slug, titulo, descricao @db.Text
+  tipo TipoAula @default(VIDEO)
+  videoUid String?              // UID do Cloudflare Stream
+  duracaoSegundos Int?
+  ordem Int
+  gratuita Boolean @default(false)   // aula de amostra
+  publicada Boolean @default(false)
+  materiais Material[], progressos ProgressoAula[]
 }
 
-// ===================================================
-// BUSINESS
-// ===================================================
-model Business {
-  id              String    @id @default(cuid())
-  placeId         String?   @unique          // ID Google Places
-  slug            String    @unique          // SEO friendly
-  name            String
-  category        Category  @relation(fields: [categoryId], references: [id])
-  categoryId      String
-  description     String?   @db.Text         // editorial / personalizada
-  address         String
-  neighborhood    String                     // ex: "Jardim Botânico"
-  city            String    @default("Brasília")
-  state           String    @default("DF")
-  latitude        Float
-  longitude       Float
-  phone           String?
-  whatsapp        String?                    // formato E.164
-  website         String?
-  instagram       String?
-  googleRating    Float?
-  googleRatingCount Int?
-  openingHours    Json?                      // estrutura do Google
-  status          BusinessStatus @default(IMPORTED)
-  plan            Plan      @default(FREE)
-  planExpiresAt   DateTime?
-
-  owner           User?     @relation(fields: [ownerId], references: [id])
-  ownerId         String?
-
-  photos          Photo[]
-  views           BusinessView[]
-  whatsappClicks  WhatsappClick[]
-  claimRequests   ClaimRequest[]
-
-  importedAt      DateTime  @default(now())
-  lastSyncedAt    DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([categoryId])
-  @@index([neighborhood])
-  @@index([plan])
-  @@index([status])
-}
-
-enum BusinessStatus {
-  IMPORTED       // importado mas não reivindicado
-  CLAIMED        // reivindicado e ativo
-  PENDING_REVIEW // reivindicação em análise
-  SUSPENDED      // suspenso por moderação
-}
-
-enum Plan {
-  FREE
-  VISIBILITY      // R$79
-  PREMIUM         // R$197
-}
-
-model Category {
-  id          String     @id @default(cuid())
-  slug        String     @unique
-  name        String
-  iconName    String?
-  description String?
-  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  parentId    String?
-  children    Category[] @relation("CategoryHierarchy")
-  businesses  Business[]
-  order       Int        @default(0)
-}
-
-model Photo {
-  id          String   @id @default(cuid())
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  businessId  String
-  url         String
-  width       Int?
-  height      Int?
-  source      PhotoSource
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-
-  @@index([businessId])
-}
-
-enum PhotoSource {
-  GOOGLE_PLACES
-  OWNER_UPLOAD
-  OPERATOR_UPLOAD
-}
-
-// ===================================================
-// CLAIMS
-// ===================================================
-model ClaimRequest {
-  id          String   @id @default(cuid())
-  business    Business @relation(fields: [businessId], references: [id])
-  businessId  String
-  user        User     @relation(fields: [userId], references: [id])
-  userId      String
-  status      ClaimStatus @default(PENDING)
-  message     String?  @db.Text
-  documentUrl String?
-  createdAt   DateTime @default(now())
-  reviewedAt  DateTime?
-  reviewerId  String?
-
-  @@index([status])
-}
-
-enum ClaimStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-// ===================================================
-// METRICS
-// ===================================================
-model BusinessView {
-  id          String   @id @default(cuid())
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  businessId  String
-  date        DateTime @default(now()) @db.Date
-  count       Int      @default(1)
-
-  @@unique([businessId, date])
-  @@index([date])
-}
-
-model WhatsappClick {
-  id          String   @id @default(cuid())
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  businessId  String
-  date        DateTime @default(now()) @db.Date
-  count       Int      @default(1)
-
-  @@unique([businessId, date])
-}
-
-// ===================================================
-// BILLING
-// ===================================================
-model Subscription {
-  id              String   @id @default(cuid())
-  businessId      String   @unique
-  plan            Plan
-  status          SubStatus
-  asaasCustomerId String
-  asaasSubId      String?
-  startedAt       DateTime @default(now())
-  expiresAt       DateTime?
-  canceledAt      DateTime?
-}
-
-enum SubStatus {
-  ACTIVE
-  PAST_DUE
-  CANCELED
-}
-
-// ===================================================
-// AUDIT LOG
-// ===================================================
-model AuditLog {
-  id        String   @id @default(cuid())
-  actorId   String?
-  action    String   // "business.created", "claim.approved", etc
-  entity    String   // "Business", "ClaimRequest"
-  entityId  String
-  metadata  Json?
-  createdAt DateTime @default(now())
-
-  @@index([entity, entityId])
-  @@index([createdAt])
+model Material {
+  id, aulaId String?, cursoId String?   // um dos dois
+  titulo, tipo TipoMaterial
+  arquivoKey String       // chave no bucket privado (R2)
+  tamanhoBytes Int, downloadPermitido Boolean @default(true), ordem Int
 }
 ```
 
-### 6.3 Google Places API — spec de integração
+### 8.3 Acesso e progresso
 
-**Endpoints usados:**
+```prisma
+enum OrigemMatricula { COMPRA CORTESIA IMPORTACAO }
+enum StatusMatricula { ATIVA EXPIRADA CANCELADA REEMBOLSADA }
 
-1. **Nearby Search (New)** — `POST /v1/places:searchNearby`
-   - Quando: importação inicial + sincronização periódica
-   - Frequência: 1x na importação, depois mensal por categoria
-   - Field mask mínimo: `places.id,places.displayName,places.formattedAddress,places.location,places.nationalPhoneNumber,places.regularOpeningHours,places.websiteUri,places.primaryType,places.rating,places.userRatingCount`
+model Matricula {
+  id, userId, cursoId, pedidoId String?
+  origem OrigemMatricula, status StatusMatricula @default(ATIVA)
+  iniciadaEm, expiraEm DateTime?, concluidaEm DateTime?
+  percentualConcluido Int @default(0)
+  @@unique([userId, cursoId])
+}
 
-2. **Place Details (New)** — `GET /v1/places/{placeId}`
-   - Quando: na primeira importação de cada negócio + sincronização periódica
-   - Field mask adicional: `photos,editorialSummary,internationalPhoneNumber`
+model ProgressoAula {
+  id, userId, aulaId, matriculaId
+  segundosAssistidos Int, ultimaPosicao Int
+  concluida Boolean @default(false), concluidaEm DateTime?
+  @@unique([userId, aulaId])
+}
 
-3. **Place Photo (New)** — `GET /v1/{photo}/media`
-   - Quando: ao exibir foto do negócio (com cache local)
-   - Estratégia: baixar uma vez para Vercel Blob, não chamar Google a cada view
-
-**Tabela de tipos importantes para o JBT (categorias):**
-
-```typescript
-const PLACE_TYPES_TO_IMPORT = [
-  // Comida e bebida
-  'restaurant', 'cafe', 'bakery', 'bar', 'meal_takeaway', 'meal_delivery',
-  'ice_cream_shop', 'pizza_restaurant', 'sushi_restaurant',
-
-  // Saúde e beleza
-  'beauty_salon', 'hair_care', 'barber_shop', 'nail_salon', 'spa',
-  'gym', 'pharmacy', 'dentist', 'doctor', 'physiotherapist',
-
-  // Compras
-  'supermarket', 'convenience_store', 'pet_store', 'clothing_store',
-  'shoe_store', 'book_store', 'florist', 'jewelry_store',
-
-  // Serviços
-  'car_repair', 'car_wash', 'laundry', 'locksmith', 'electrician', 'plumber',
-
-  // Educação
-  'school', 'university', 'library', 'training_center',
-] as const
+model Certificado {
+  id, codigo @unique               // ex.: KM-2026-A7F3C9
+  userId, cursoId, matriculaId @unique
+  nomeAluno, cpfAluno, cursoTitulo, cargaHorariaMinutos   // snapshot imutável
+  emitidoEm DateTime
+}
 ```
 
-**Cuidados:**
-- Field mask é obrigatório (sem ele a API retorna erro)
-- Place IDs podem mudar — armazenar mas não confiar como chave eterna
-- Fotos não podem ser reservidas indefinidamente sem permissão; baixar para Blob é prática comum
-- Atribuição obrigatória: exibir "Powered by Google" e link de origem quando usar dados deles
+### 8.4 Comércio
 
-### 6.4 Segurança e LGPD
+```prisma
+enum StatusPedido { PENDENTE PAGO FALHOU REEMBOLSADO }
+enum TipoCupom    { PERCENTUAL VALOR_FIXO }
 
-**Princípios:**
+model Pedido {
+  id, userId, cursoId
+  stripeSessionId @unique, stripePaymentIntentId String?
+  valorCentavos Int, cupomId String?
+  status StatusPedido @default(PENDENTE)
+  criadoEm, pagoEm DateTime?
+}
 
-1. **Dados pessoais mínimos**: coletamos só email + nome do anunciante. Não pedimos CPF (uso CNPJ no checkout via Asaas).
-2. **Consentimento explícito**: ao reivindicar negócio, checkbox para Termos + Política de Privacidade.
-3. **Direito ao esquecimento**: rota `/api/lgpd/delete-my-data` para usuário solicitar exclusão.
-4. **Logs de auditoria**: toda ação administrativa logada (quem aprovou, quem editou).
-5. **Senha**: bcrypt com cost 12 mínimo. Nunca log de senha.
-6. **Rate limiting**: nas rotas de busca e de login (proteção contra abuso).
-7. **CSP headers**: configurar via `next.config.js`.
-8. **Secrets**: nunca no código, sempre `.env`, nunca commitar.
-
-**Negócios importados sem reivindicação:** são *dados públicos* do Google Places (não dados pessoais), portanto fora do escopo LGPD para titular. Mas se o dono pedir exclusão, atendemos.
-
-### 6.5 Performance e cache
-
-- **ISR (Incremental Static Regeneration)** para páginas públicas — revalidar a cada 1h.
-- **Cache de Places API** no banco — não consultar Google a cada page view.
-- **Imagens otimizadas** via `next/image` + Vercel Blob.
-- **Lazy loading** de listas longas com `Intersection Observer`.
-- **Edge caching** Vercel para assets estáticos.
-
-### 6.6 Observabilidade
-
-- **Sentry** para erros runtime
-- **Vercel Analytics** para métricas de página
-- **Custom events** para cliques no WhatsApp (incrementar contador no DB)
-- **Painel admin** com dashboard de métricas-chave: MRR, anunciantes ativos, importações pendentes, claims pendentes
-
----
-
-## Parte 7 — Projeto Base (limpeza do Courtesyfy)
-
-### 7.1 O que mantém
-
-- Estrutura `src/app/` com App Router
-- Configuração Tailwind + shadcn/ui
-- NextAuth setup (apenas providers, sem lógica de negócio do Courtesyfy)
-- Prisma config (resetar schema)
-- Padrão de rotas API
-- Middleware de autenticação
-- Componentes UI genéricos (Button, Input, Card, Dialog, Form)
-- Layout root + tema (adaptar paleta)
-- Configuração de variáveis ambiente (`.env.example`)
-- Setup de Sentry, se houver
-- CI/CD do GitHub Actions, se houver
-
-### 7.2 O que remove
-
-- Toda lógica de cortesias, cupons, fidelidade, QR code do Courtesyfy
-- Tabelas Prisma específicas do Courtesyfy
-- Páginas específicas do Courtesyfy
-- Seeds antigos
-- Variáveis de ambiente específicas
-
-### 7.3 Estrutura final do projeto base genérico
-
-```
-projeto-base/
-├── .specify/                    # Spec-Kit instalado
-├── .github/workflows/
-│   └── ci.yml
-├── .env.example
-├── prisma/
-│   └── schema.prisma            # vazio, só com User/Account/Session/AuditLog
-├── public/
-├── src/
-│   ├── app/
-│   │   ├── (public)/
-│   │   │   └── layout.tsx
-│   │   ├── (auth)/
-│   │   │   ├── login/page.tsx
-│   │   │   ├── register/page.tsx
-│   │   │   └── layout.tsx
-│   │   ├── (dashboard)/
-│   │   │   └── layout.tsx
-│   │   ├── api/
-│   │   │   ├── auth/[...nextauth]/route.ts
-│   │   │   └── health/route.ts
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── components/
-│   │   └── ui/                  # shadcn primitives
-│   ├── lib/
-│   │   ├── auth.ts
-│   │   ├── prisma.ts
-│   │   ├── utils.ts
-│   │   └── env.ts               # validação tipada de env vars
-│   └── middleware.ts
-├── tailwind.config.ts
-├── tsconfig.json
-├── next.config.js
-├── package.json
-└── README.md
+model Cupom {          // v1.1
+  id, codigo @unique, tipo TipoCupom, valor Int
+  cursoId String?, usosMaximos Int?, usosAtuais Int @default(0)
+  validoAte DateTime?, ativo Boolean @default(true)
+}
 ```
 
-### 7.4 Setup checklist (Release 0)
+### 8.5 Conteúdo de marketing e operação
 
-```
-[ ] Clonar Courtesyfy em pasta nova: projeto-base
-[ ] Remover todo código específico do Courtesyfy
-[ ] Resetar schema Prisma para o mínimo (User + auth)
-[ ] Adaptar paleta visual (remover cor específica do Courtesyfy)
-[ ] Atualizar README com setup genérico
-[ ] Commitar como template
-[ ] Criar repo separado "achei-jardim-botanico" a partir do template
-[ ] Instalar Spec-Kit: `uv tool install specify-cli` e `specify init . --integration claude --integration-options="--skills"`
-[ ] Rodar /speckit.constitution com os princípios deste documento
-[ ] Adicionar schema completo do Achei
-[ ] Criar primeiro ADR (stack choice)
-[ ] Criar Specs 001 a 008 (vazios, só com título e contexto)
-[ ] Configurar .env.local com chaves Google Places + Asaas (test)
-[ ] Configurar deploy Vercel com domínio acheinojardimbotanico.com.br
-[ ] Configurar GA4 + Vercel Analytics
-[ ] Smoke test: deploy de "Hello, Jardim Botânico"
+```prisma
+model Depoimento     { id, cursoId?, nome, cargo, fotoUrl, texto, nota Int?, aprovado, ordem }
+model Faq            { id, cursoId?, pergunta, resposta @db.Text, ordem }
+model ConfigPlataforma { id, nomeMarca, logoUrl, corPrimaria, whatsapp, instagram, textosLanding Json }
+model LogEvento      { id, userId?, tipo, entidade, entidadeId, metadata Json, ip, criadoEm }
 ```
 
 ---
 
-## Parte 8 — Specs iniciais (esqueleto)
+## Parte 9 — Arquitetura e integrações
 
-### Spec 001 — Importação via Google Places API
+### 9.1 Stack
 
-**Contexto:** Para o produto ter valor de descoberta desde o primeiro dia, precisa estar populado. Importação automatizada via Places API resolve o cold start, evita cadastro manual e cria a base para o pitch "seu negócio já está aqui".
-
-**Critérios de aceite:**
-- [ ] Rota admin `/admin/import` aceita parâmetros: centro (lat/lng), raio, lista de tipos
-- [ ] Cada negócio retornado é persistido em `Business` com status `IMPORTED`
-- [ ] Fotos são baixadas para Vercel Blob, max 5 por negócio
-- [ ] Tipo Google é mapeado para `Category` do nosso domínio
-- [ ] Re-importação de um placeId já existente atualiza dados, não duplica
-- [ ] Log de auditoria registrado para cada importação em massa
-- [ ] Falhas individuais não derrubam o lote (try/catch por item)
-
-**Não-objetivos:** Sincronização contínua em tempo real (fica para v2). Importação de reviews (usar só rating agregado).
-
-**Fluxo principal:**
-1. Admin acessa `/admin/import`
-2. Preenche: centro `(-15.8762, -47.9292)`, raio 3000m, tipos `[restaurant, cafe, beauty_salon, ...]`
-3. Submete
-4. Backend itera tipos, faz Nearby Search para cada
-5. Para cada placeId retornado, faz Place Details
-6. Baixa fotos, persiste tudo
-7. Retorna relatório: importados / atualizados / erros
-
-**Modelo de dados afetado:** `Business`, `Category`, `Photo`, `AuditLog`.
-
-**Riscos:** Cota da Places API estourar (mitigação: contador antes de cada batch); fotos pesadas (mitigação: limite 5 por negócio); dados imprecisos do Google (mitigação: campo `lastSyncedAt` para auditar quando puxou).
-
----
-
-### Spec 002 — Listagem pública por categoria
-
-**Contexto:** Persona Marina chega via SEO. Precisa de listagem rápida, mobile-first, com info essencial visível sem clicar.
-
-**Critérios de aceite:**
-- [ ] Rota `/[bairro]/[categoria]` (ex: `/jardim-botanico/cafeterias`)
-- [ ] Lista todos os `Business` da categoria, ordenados: Premium > Visibilidade > Free, depois por rating decrescente
-- [ ] Cada card mostra: nome, foto principal, rating, distância (se geolocalização permitida), horário status ("aberto"/"fecha em X min"), botão WhatsApp
-- [ ] Filtro: "aberto agora" (toggle)
-- [ ] Busca textual local na categoria
-- [ ] Página renderizada via ISR, revalidação 1h
-- [ ] Schema.org `LocalBusiness` em cada card (JSON-LD)
-- [ ] Open Graph + título SEO por categoria
-
-**Fluxos de exceção:** Categoria sem negócios → mensagem "Em breve estamos com novos negócios aqui — conhece algum? Sugira!" com formulário.
-
-**Métricas de sucesso:** CTR para página de detalhe > 30%. Tempo de carregamento < 1.5s mobile.
-
----
-
-### Spec 003 — Página de detalhe do negócio
-
-**Critérios de aceite:**
-- [ ] Rota `/[bairro]/[categoria]/[slug]`
-- [ ] Header com nome, rating Google, categoria, badge se Premium
-- [ ] Galeria com lazy loading
-- [ ] Bloco de info: endereço, telefone, horário completo da semana, status atual
-- [ ] CTAs proeminentes: "Abrir no WhatsApp", "Ligar", "Como chegar" (link Google Maps), "Site"
-- [ ] Descrição editorial (se Visibilidade+) ou só nome (se Free)
-- [ ] Reviews do Google integradas (top 3 melhores)
-- [ ] JSON-LD `LocalBusiness` completo
-- [ ] Click no WhatsApp dispara evento `WhatsappClick` (incrementa contador do dia)
-- [ ] View na página dispara evento `BusinessView`
-- [ ] Se status = `SUSPENDED`, mostra 410 Gone
-
-**Não-objetivos v1:** comentários, salvos, sistema de avaliação próprio.
-
----
-
-### Spec 004 — Autenticação
-
-**Critérios:**
-- [ ] Email/senha + Google OAuth via NextAuth v5
-- [ ] Verificação de email obrigatória antes de reivindicar negócio
-- [ ] Reset de senha funcional
-- [ ] Sessão JWT de 30 dias
-- [ ] Middleware protege rotas `/dashboard/*` e `/admin/*`
-- [ ] `/admin/*` requer role = ADMIN
-
----
-
-### Spec 005 — Reivindicação de negócio
-
-**Critérios:**
-- [ ] Botão "Este negócio é meu?" em todo perfil sem dono
-- [ ] Fluxo de reivindicação: login → preencher dados de comprovação (CNPJ, telefone, upload de documento opcional)
-- [ ] Cria `ClaimRequest` com status PENDING
-- [ ] Email para admin notificando
-- [ ] Admin aprova/rejeita via `/admin/claims`
-- [ ] Ao aprovar: `Business.ownerId = userId`, status `CLAIMED`
-- [ ] Email para usuário notificando aprovação/rejeição
-- [ ] Negócio com 0 reviews ou rating < 3.5 entra em fila de revisão extra
-
----
-
-### Spec 006 — Painel do anunciante (free)
-
-**Critérios:**
-- [ ] `/dashboard` lista negócios reivindicados pelo usuário
-- [ ] Editar: descrição, WhatsApp, horários customizados (sobrepõem Google), site, Instagram
-- [ ] Upload de até 3 fotos no plano Free, 6 em Visibilidade, 20 em Premium
-- [ ] Preview de como o perfil aparece publicamente
-- [ ] Página de plano atual + upgrade CTA
-- [ ] Métricas básicas (free): apenas visualizações últimos 7 dias
-
----
-
-### Spec 007 — Painel administrativo
-
-**Critérios:**
-- [ ] `/admin/dashboard` com KPIs: total de negócios, reivindicados, anunciantes pagos, MRR
-- [ ] `/admin/businesses` CRUD completo
-- [ ] `/admin/claims` lista de reivindicações pendentes
-- [ ] `/admin/import` interface da Spec 001
-- [ ] `/admin/audit` log de auditoria pesquisável
-- [ ] Apenas role ADMIN acessa
-
----
-
-### Spec 008 — Checkout assinatura Visibilidade
-
-**Critérios:**
-- [ ] Integração Asaas (criação de cliente + assinatura recorrente)
-- [ ] Métodos: PIX, cartão, boleto
-- [ ] Webhook Asaas atualiza `Subscription.status`
-- [ ] Quando ativa: `Business.plan = VISIBILITY`, `planExpiresAt = +30d`
-- [ ] Quando past_due: degrada para Free após 7 dias de tolerância
-- [ ] Página de cobranças no painel
-- [ ] Email de confirmação + 3 dias antes do vencimento
-
----
-
-## Parte 9 — Roadmap de execução (12 semanas, 1h/dia + sábados)
-
-| Semana | Foco | Saída concreta |
+| Camada | Tecnologia | Situação |
 |---|---|---|
-| 1 | Project base + Spec-Kit + ADRs iniciais | Repo base genérico + repo do Achei vazio + 8 ADRs |
-| 2 | Spec 001 — Import + dados populados | 200+ negócios no banco, página /admin/import funcional |
-| 3 | Spec 002 — Listagem pública | Site público em produção, com SEO básico |
-| 4 | Spec 003 — Detalhe + métricas tracking | Página de detalhe + contadores funcionando |
-| 5 | Spec 004 — Auth completa | Login/registro/Google OAuth + email verify |
-| 6 | Spec 005 — Claim flow | Fluxo de reivindicação ponta a ponta |
-| 7 | Spec 006 — Painel anunciante | CRUD + upload de foto + preview |
-| 8 | Spec 007 — Admin completo | Dashboard, claims review, audit log |
-| 9 | Spec 008 — Asaas + Visibilidade | Pagamento end-to-end com webhook |
-| 10 | SEO técnico + sitemap + Open Graph | Páginas indexáveis, schema.org completo |
-| 11 | Polish + bugfix + UX review | Lista de melhorias do beta interno |
-| 12 | Launch preparation + primeiros prospects | Material de venda + 20 visitas presenciais |
+| Framework | Next.js 16 (App Router) + React 19 + TypeScript | ✅ já no projeto |
+| Estilo | Tailwind 4 + shadcn/ui (23 componentes) + dark mode | ✅ já no projeto |
+| Banco | MySQL + Prisma 5 (`relationMode = "prisma"`) | ✅ já no projeto |
+| Auth | NextAuth v5 (Credentials + Google + GitHub) | ✅ já no projeto |
+| Pagamento | Stripe Checkout + Webhook | ✅ já no projeto (adaptar) |
+| **Vídeo** | **Cloudflare Stream** | 🆕 a integrar |
+| **Materiais** | **Cloudflare R2** (bucket privado, S3-compatible) | 🆕 a integrar |
+| Imagens públicas | Cloudinary (capas, avatares) | ✅ já no projeto |
+| E-mail | Resend + React Email | ✅ já no projeto |
+| Rate limit | Upstash Redis | ✅ já no projeto |
+| PDF (certificado) | jsPDF | ✅ já no projeto |
+| Gráficos | Recharts | ✅ já no projeto |
+| Testes | Vitest | ✅ já no projeto |
+| Deploy | Vercel | ✅ já no projeto |
+
+### 9.2 Mapa de rotas
+
+**Públicas**
+| Rota | Descrição |
+|---|---|
+| `/` | Landing page |
+| `/cursos` | Catálogo |
+| `/cursos/[slug]` | Página de vendas do curso |
+| `/professores/[slug]` | Perfil do professor convidado |
+| `/certificados/[codigo]` | Validação pública de certificado |
+| `/login` `/cadastro` `/recuperar-senha` `/verificar-email` | Autenticação |
+| `/termos-de-uso` `/politica-de-privacidade` | Legal |
+
+**Área do aluno**
+| Rota | Descrição |
+|---|---|
+| `/aluno` | Meus cursos, progresso, continuar de onde parou |
+| `/aluno/curso/[slug]` | Sala de aula (redireciona para a próxima aula) |
+| `/aluno/curso/[slug]/[aulaSlug]` | Player + materiais |
+| `/aluno/certificados` | Certificados emitidos |
+| `/aluno/perfil` | Dados pessoais, CPF, senha |
+
+**Painel administrativo**
+| Rota | Descrição |
+|---|---|
+| `/admin` | Dashboard de resultados |
+| `/admin/cursos` · `/admin/cursos/[id]` | Lista e editor de curso (módulos e aulas) |
+| `/admin/cursos/[id]/aulas/[aulaId]` | Editor de aula: vídeo + materiais |
+| `/admin/alunos` · `/admin/alunos/[id]` | Gestão de alunos |
+| `/admin/matriculas` | Conceder / revogar acesso |
+| `/admin/pedidos` | Vendas e status de pagamento |
+| `/admin/professores` · `/admin/depoimentos` · `/admin/cupons` | Conteúdo de apoio |
+| `/admin/configuracoes` | Marca, textos da landing, contato |
+
+**API**
+| Rota | Método | Auth | Descrição |
+|---|---|---|---|
+| `/api/auth/[...nextauth]` | GET/POST | — | NextAuth |
+| `/api/checkout` | POST | Sessão | Cria Stripe Checkout Session |
+| `/api/webhook/stripe` | POST | Assinatura Stripe | Cria matrícula, processa reembolso |
+| `/api/webhook/stream` | POST | Assinatura Cloudflare | Atualiza duração e status do vídeo |
+| `/api/video/[aulaId]/token` | GET | Sessão + matrícula | Devolve token assinado do player |
+| `/api/materiais/[id]/download` | GET | Sessão + matrícula | Redirect para URL temporária do R2 |
+| `/api/upload/video` | POST | ADMIN | Cria URL de upload direto no Stream |
+| `/api/upload/imagem` | POST | ADMIN | Upload Cloudinary (reaproveitado) |
+| `/api/cron/expirar-matriculas` | GET | `CRON_SECRET` | Expira matrículas com prazo vencido |
+
+### 9.3 Fluxo de vídeo — upload
+
+```
+Dra. seleciona o .mp4
+   ↓
+Server Action valida ADMIN → chama Cloudflare API "direct_upload"
+   (requireSignedURLs: true, maxDurationSeconds, creator: cursoId)
+   ↓
+Devolve { uploadURL, uid }  →  browser envia o arquivo DIRETO para o Cloudflare
+   (não passa pelo nosso servidor → sem limite de 4,5 MB da Vercel)
+   ↓
+Salva aula.videoUid = uid
+   ↓
+Webhook do Stream avisa "ready" → grava duracaoSegundos e libera a aula
+```
+
+### 9.4 Fluxo de vídeo — reprodução
+
+```
+Aluno abre /aluno/curso/[slug]/[aulaSlug]
+   ↓
+Server Component consulta Matricula (userId + cursoId, status ATIVA, não expirada)
+   ↓  não tem → redirect para a página de vendas
+   ↓  tem
+GET /api/video/[aulaId]/token → assina JWT com a chave do Stream (exp ≈ 2h)
+   ↓
+Player carrega com o token. Overlay HTML com nome + e-mail do aluno,
+reposicionado a cada 30s (marca d'água dinâmica)
+   ↓
+A cada 15s o player envia posição → Server Action salva ProgressoAula
+   ↓
+Ao passar de 90% → aula concluída → recalcula percentual da matrícula
+   ↓
+100% → emite Certificado
+```
+
+### 9.5 Fluxo de materiais (PDF / slides)
+
+```
+Upload:   Admin → Server Action → PUT direto no R2 (bucket privado) → salva arquivoKey
+Download: Aluno clica → GET /api/materiais/[id]/download
+          → valida matrícula → gera presigned URL (60s) → 302 redirect
+          → (opcional) carimba e-mail do aluno no rodapé do PDF com pdf-lib
+```
+
+### 9.6 Fluxo de compra
+
+```
+/cursos/[slug] → "Quero me inscrever"
+   ↓ não logado → /cadastro?redirect=/cursos/[slug]
+POST /api/checkout { cursoId }
+   → cria Pedido PENDENTE
+   → Stripe Checkout Session (mode: payment, client_reference_id: userId,
+     metadata: { cursoId, pedidoId })
+   ↓
+Stripe hospeda o pagamento → redireciona para /obrigado?session_id=...
+   ↓
+Webhook checkout.session.completed
+   → Pedido PAGO (idempotente por stripeSessionId)
+   → Matricula ATIVA
+   → e-mail "acesso liberado"
+```
 
 ---
 
-## Parte 10 — Constituição do projeto (princípios invioláveis)
+## Parte 10 — Landing page
 
-Estes vão para `.specify/memory/constitution.md` e o Spec-Kit os lê em toda execução.
+Referência escolhida: **lp.cademi.com.br**. O que funciona lá é a estrutura de conversão —
+hero direto, prova social pesada, três passos, features em lista, CTA repetido. O que vamos
+mudar é o conteúdo: a Cademí vende software para produtores; nós vendemos **formação médica
+com a assinatura de uma pessoa**. A autoridade dela é o principal ativo da página.
 
-1. **Mobile-first**, sempre. Se quebrar em mobile, não está pronto.
-2. **SEO local é vantagem competitiva**, não nice-to-have. Toda página pública tem JSON-LD, sitemap entry, Open Graph.
-3. **Privacidade por padrão**: LGPD compliance é não-negociável. Dados pessoais ao mínimo.
-4. **Performance importa**: meta de < 2s LCP em 3G; sem isto, descoberta espontânea morre.
-5. **Reversibilidade**: nada de migrações destrutivas sem backup. Toda ação admin é logada.
-6. **Acessibilidade**: WCAG 2.1 AA como meta. Não é caridade, é mercado (idosos compram local).
-7. **Single source of truth**: Spec antes do código. Se a spec não está clara, não codifica.
-8. **Dependência mínima**: cada lib adicionada precisa de justificativa registrada (ADR ou comentário no PR).
-9. **Tests onde matter**: lógica de billing e integração Places API têm testes obrigatórios. UI pode pular.
-10. **Curadoria humana é feature**: o operador editar manualmente um negócio é fluxo de primeira classe, não exceção.
+### 10.1 Mapa de seções
 
----
+| # | Seção Cademí | Nossa versão |
+|---|---|---|
+| 1 | Hero "Entregue e venda mais" + mockup de notebook | **Hero de autoridade**: foto dela + headline sobre o resultado do aluno + CTA "Conheça os cursos" + CTA secundário "Assistir aula gratuita" |
+| 2 | Logos de empresas + depoimentos | **Números e credenciais**: alunos formados, horas de conteúdo, instituições/congressos onde atuou |
+| 3 | Squeeze Method (3 passos) | **Como funciona**: 1) Escolha o curso · 2) Estude no seu ritmo, no celular · 3) Receba seu certificado |
+| 4 | Lista de features por passo | **O que você recebe**: aulas em vídeo HD, slides e PDFs para baixar, acesso vitalício, certificado com validação, atualizações incluídas |
+| 5 | — | **Catálogo em destaque**: cards dos cursos publicados com preço e CTA |
+| 6 | Suporte #GenteDeVerdade | **Canal de dúvidas**: como o aluno fala com a Dra. (comentários na aula / WhatsApp) |
+| 7 | "Mate sua curiosidade" | **Aula gratuita de amostra** reproduzível ali mesmo |
+| 8 | Logos de gateways | **Formas de pagamento** + selo de compra segura + garantia de 7 dias |
+| 9 | Migração | **Sobre a Dra. Karollyne**: formação, especialidade, CRM/RQE, trajetória, foto profissional |
+| 10 | Depoimentos | **Depoimentos de alunos** (médicos e residentes), com foto e função |
+| 11 | CTA final | **FAQ** + CTA final de inscrição |
+| 12 | Rodapé | Rodapé: links legais, contato, CNPJ, redes sociais |
 
-## Apêndice A — Glossário rápido
+### 10.2 Direção visual
 
-- **ICP** (Ideal Customer Profile): perfil do cliente ideal
-- **MRR** (Monthly Recurring Revenue): receita recorrente mensal
-- **JTBD** (Jobs to Be Done): framework de análise de demanda
-- **ADR** (Architecture Decision Record): registro de decisão arquitetural
-- **ISR** (Incremental Static Regeneration): geração estática incremental do Next.js
-- **CSP** (Content Security Policy): cabeçalho de segurança contra XSS
-- **PRD** (Product Requirements Document): documento de requisitos
-- **LCP** (Largest Contentful Paint): métrica core web vital de performance
-- **UGC** (User-Generated Content): conteúdo gerado por usuário
+Manter o que a referência acerta: fundo claro, muito respiro, tipografia sans moderna,
+seções de largura contida, imagens grandes e limpas.
 
----
+Ajustar para o contexto médico: paleta sóbria (um neutro claro + uma cor de acento definida
+com ela), zero sensacionalismo, nada de contagem regressiva agressiva ou "última chance".
+Credibilidade vale mais que urgência aqui — e ainda tem a questão da publicidade médica
+(Parte 14).
 
-## Apêndice B — Como evoluir este documento
-
-Este arquivo é o **discricionário mestre**. Evolução:
-
-1. Mudanças de visão / personas / monetização → editam este documento diretamente
-2. Mudanças de feature individual → editam a spec específica em `/specs/NNN-feature/spec.md`
-3. Decisões técnicas novas → criam ADR em `/docs/adr/`
-4. Aprendizados de operação → vão para `/docs/runbooks/`
-
-Nada de "v2 do documento". O git é o histórico.
+**Pendente:** logo, paleta e fotos profissionais. Sem isso a landing sai com placeholder.
 
 ---
 
-**Próximo passo concreto:** Iniciar Release 0 — clonar Courtesyfy, limpar, instalar Spec-Kit, escrever a constitution.md baseada na Parte 10 deste documento, criar ADRs 0001 a 0008.
+## Parte 11 — Reaproveitamento do projeto base
 
-*Documento elaborado por Claude (Anthropic) a partir de discovery realizada com Álvaro — Technology Web. Mai/2026.*
+O projeto base é o **Courtesyfy** (SaaS de chaves promocionais). A infraestrutura é
+excelente e economiza semanas; o domínio de negócio inteiro precisa sair.
+
+### 11.1 Mantém (aproveitamento direto)
+
+| Item | Onde |
+|---|---|
+| NextAuth v5 completo — Credentials + Google + GitHub, verificação de e-mail, tokens, tentativas de login | `src/lib/auth.ts`, `src/app/api/auth`, `login`, `register`, `verify-email`, `forgot-password` |
+| Prisma singleton e models de autenticação | `src/lib/prisma.ts`, `prisma/schema.prisma` |
+| Stripe: client, criação de checkout, padrão de webhook com verificação de assinatura | `src/lib/stripe.ts`, `src/app/api/webhook` |
+| Resend + React Email (templates prontos) | `src/lib/email.ts`, `src/emails`, `src/components/emails` |
+| Rate limit com Upstash | `src/lib/rate-limit.ts`, `src/lib/upstash.ts` |
+| Design system: 23 componentes shadcn/ui, tokens OKLCH, dark mode | `src/components/ui`, `src/app/globals.css` |
+| Headers de segurança (CSP, X-Frame-Options, etc.) | `next.config.ts` — ajustar CSP para Cloudflare |
+| Upload de imagem no Cloudinary | `src/app/api/upload/route.ts` — trocar a pasta |
+| jsPDF (vai virar o gerador de certificado) | dependência já instalada |
+| Recharts (dashboard de vendas) | dependência já instalada |
+| Vitest configurado | `vitest.config.ts`, `tests/` |
+| Versionamento automático | `scripts/update-version.js` |
+| Estrutura `(panel)` / `(public)` com `_actions` e `_components` | `src/app` |
+
+### 11.2 Adapta
+
+| Item | Mudança |
+|---|---|
+| `middleware.ts` | Domínio canônico e nova lista de rotas públicas |
+| `src/lib/auth.ts` | `lojaId` sai da sessão; entram os papéis novos |
+| `src/lib/email.ts` | `EMAIL_FROM`, remetente e templates do novo contexto |
+| `next.config.ts` | CSP liberando `cloudflarestream.com` e o bucket R2 |
+| `.claude/commands/iniciar-contexto.md` | Aponta para os arquivos do projeto novo |
+
+### 11.3 Remove
+
+**Modelos Prisma:** `Loja`, `Layout`, `Campanha`, `LoteChave`, `Chave`, `Cliente`,
+`Resgate`, `SolicitacaoImpressao` e os enums associados.
+
+**Rotas:** `/dashboard/campanhas`, `/chaves`, `/resgates`, `/validar`, `/totem`,
+`/impressao`, `/layout`, `/lojas`, `/clientes`, `/c/[codigo]`, `/r/[lojaId]`, `/resgatar`,
+`/print`, `/onboarding/loja`, `/api/chaves`, `/api/lotes`, `/api/print`,
+`/api/checkout-produto`, `/api/cron/expirar-chaves`.
+
+**Dependências:** `qrcode`, `qrcode.react`, `jsqr`, `html2canvas` e (a confirmar) `twilio`.
+`canvas-confetti` fica — vira a comemoração de conclusão de curso.
+
+**Arquivos de contexto:** já removidos nesta sessão — `TODO.md`,
+`planning/context_principal.md`, `planning/ia-contexto-funcionalidades.md`,
+`planning/ia-contexto-instalacao.md`. O `spec.md` antigo (projeto "Achei no Jardim Botânico")
+foi substituído por este documento; o método de trabalho dele foi preservado.
+
+---
+
+## Parte 12 — Releases
+
+Sequenciamento pensado para entregar valor cedo e deixar a Dra. produzindo conteúdo o quanto
+antes — a plataforma sem conteúdo não vale nada.
+
+### R0 — Fundação (limpeza) · ~1 semana
+Remover o domínio Courtesyfy do código e do schema · novo `schema.prisma` · seed com a conta
+ADMIN dela · variáveis de ambiente · marca e paleta · deploy inicial no domínio definitivo.
+**Entrega:** projeto limpo, buildando, autenticando e publicado.
+
+### R1 — Núcleo do conteúdo · ~2 semanas
+Painel de cursos, módulos e aulas · upload de vídeo para o Cloudflare Stream · upload de
+materiais no R2 · sala de aula com player, progresso e materiais · controle de acesso por
+matrícula (liberada manualmente por enquanto).
+**Entrega:** a Dra. já consegue subir um curso inteiro e um aluno de teste consegue assistir.
+**É o marco mais importante do projeto.**
+
+### R2 — Venda · ~1,5 semana
+Catálogo · página de vendas do curso · checkout Stripe · webhook idempotente · matrícula
+automática · e-mails transacionais · painel de pedidos.
+**Entrega:** dá para vender.
+
+### R3 — Landing e certificado · ~1,5 semana
+Landing page completa · página de validação de certificado · geração do PDF · depoimentos ·
+FAQ · SEO e Open Graph.
+**Entrega:** dá para divulgar.
+
+### R4 — Lançamento · ~1 semana
+Políticas legais · analytics · testes de ponta a ponta do fluxo de compra · carga do conteúdo
+real · revisão de segurança · monitoramento de custo do Stream.
+**Entrega:** v1.0 no ar.
+
+### v1.1 e além
+Comentários e dúvidas por aula · quizzes e provas · cupons · drip content · anotações do
+aluno · retenção por aula · assinatura recorrente (acesso a todos os cursos) · PWA/offline ·
+notificação por WhatsApp · emissão de nota fiscal.
+
+---
+
+## Parte 13 — Custos
+
+Estimativa mensal em regime de operação. O único item que escala com o sucesso é o vídeo.
+
+| Item | Custo | Observação |
+|---|---|---|
+| Vercel Pro | ~US$ 20 | Recomendado em produção (domínio, analytics, limites) |
+| MySQL | a confirmar | Já contratado no projeto base — verificar provedor e plano |
+| **Cloudflare Stream — armazenamento** | US$ 5 por 1.000 min | 20h de curso ≈ 1.200 min ≈ **US$ 6/mês** |
+| **Cloudflare Stream — entrega** | US$ 1 por 1.000 min | **Este é o custo variável.** 100 alunos × 20h ≈ 120.000 min ≈ **US$ 120** |
+| Cloudflare R2 | US$ 0,015/GB | Sem taxa de saída. 5 GB de PDFs ≈ US$ 0,08 |
+| Resend | US$ 0 → 20 | Grátis até 3.000 e-mails/mês |
+| Cloudinary | US$ 0 | Free tier atende as imagens |
+| Upstash Redis | US$ 0 | Free tier atende |
+| Stripe | ~4% + taxa fixa por venda | Sem mensalidade |
+| Domínio | ~R$ 40/ano | — |
+
+**Leitura importante:** o custo de entrega de vídeo é de aproximadamente **US$ 1,20 por aluno
+que assiste 20 horas**. Num curso de R$ 497, isso é menos de 1,5% da receita. O modelo se
+paga com folga — mas precisa de alerta de consumo para não haver surpresa (RNF10).
+
+---
+
+## Parte 14 — Riscos e conformidade
+
+Esta parte existe porque o produto é de uma **médica**, e isso traz obrigações que um curso
+de marketing não tem. Vale conversar com o jurídico dela antes do lançamento.
+
+| # | Risco | Mitigação |
+|---|---|---|
+| R1 | **Publicidade médica (CFM)** — a Resolução CFM nº 2.336/2023 regula como um médico pode se anunciar: sem promessa de resultado, sem sensacionalismo, com identificação de nome, CRM e RQE | A landing evita linguagem de promessa e urgência artificial; nome, CRM e especialidade aparecem de forma clara. **Recomendo validar os textos com o jurídico/CRM antes de publicar** |
+| R2 | **Depoimentos** — o CFM veda depoimento de *paciente*. Depoimento de *aluno* sobre um curso é outra relação, mas a fronteira merece checagem | Depoimentos apenas de alunos, sobre o conteúdo do curso, nunca sobre tratamento recebido |
+| R3 | **Imagens clínicas nos slides** — foto de paciente é dado sensível de saúde (LGPD art. 11) | Anonimização obrigatória + termo de consentimento arquivado. Vale um checklist no painel na hora de subir material |
+| R4 | **Direito autoral de terceiros** — imagens de atlas e livros nos slides | Material autoral ou banco licenciado. Registrar a origem de cada imagem |
+| R5 | **Pirataria** — vazamento de vídeo e PDF | URLs assinadas, marca d'água dinâmica com dados do aluno, carimbo nos PDFs, limite de sessões simultâneas (v1.1) |
+| R6 | **Direito de arrependimento (CDC art. 49)** — 7 dias para compra online | Política de reembolso explícita no checkout + fluxo de revogação de acesso já previsto |
+| R7 | **Nota fiscal** — cada venda exige NFS-e | Precisa de CNPJ (PJ médica). No MVP, emissão manual; automatizar na v2 |
+| R8 | **Conteúdo de professor convidado** | Contrato de cessão de direitos de uso da aula, assinado antes de publicar |
+| R9 | **LGPD geral** | Política de privacidade, base legal (execução de contrato), canal de contato, exclusão de conta sob pedido, retenção definida |
+| R10 | **Dependência de fornecedor de vídeo** | O `videoUid` fica no nosso banco e os arquivos originais ficam com ela. Migrar de plataforma é trabalhoso, mas não é perda de conteúdo |
+
+---
+
+## Parte 15 — Decisões em aberto
+
+Precisam de resposta da Dra. Karollyne (ou de verificação técnica) antes ou durante o R0.
+
+**Marca e identidade**
+1. Nome da plataforma e domínio definitivo — o código já referencia `karollynemorais.com.br`. Confirma?
+2. Logo, paleta de cores e fotos profissionais — quem faz, e para quando?
+3. Tom de voz: mais acadêmico ou mais próximo?
+
+**Conteúdo**
+4. Qual é o tema/especialidade do primeiro curso?
+5. O conteúdo já está gravado? Quantas horas, em que formato, onde está hoje?
+6. Vai ter professor convidado já no primeiro curso?
+
+**Comercial**
+7. Preço do primeiro curso e política de parcelamento
+8. Acesso vitalício ou por prazo (12 meses)?
+9. **PIX e parcelamento no Stripe** — verificar se a conta Stripe BR tem os dois habilitados. Se não tiver, é um risco comercial real no Brasil e talvez valha avaliar Mercado Pago ou Asaas em paralelo
+10. Política de reembolso (além dos 7 dias legais)
+11. CNPJ para emissão de nota fiscal — já existe?
+
+**Produto**
+12. Certificado: qual carga horária, leva assinatura digitalizada dela? Leva CRM/RQE?
+13. Comentários e dúvidas nas aulas entram no MVP ou ficam para a v1.1?
+14. Ela quer receber notificação (e-mail/WhatsApp) a cada venda?
+
+**Técnico**
+15. Confirmar o provedor e o plano do MySQL atual
+16. Criar a conta Cloudflare (Stream + R2) e gerar as credenciais
+
+---
+
+## Apêndice A — Variáveis de ambiente
+
+```bash
+# Banco
+DATABASE_URL=
+
+# NextAuth
+NEXTAUTH_URL=
+NEXTAUTH_SECRET=
+AUTH_GOOGLE_ID=
+AUTH_GOOGLE_SECRET=
+
+# Stripe
+STRIPE_SECRET_KEY=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# Cloudflare Stream
+CLOUDFLARE_ACCOUNT_ID=
+CLOUDFLARE_STREAM_TOKEN=
+CLOUDFLARE_STREAM_KEY_ID=
+CLOUDFLARE_STREAM_KEY_JWK=
+NEXT_PUBLIC_CLOUDFLARE_CUSTOMER_CODE=
+
+# Cloudflare R2 (materiais privados)
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET=
+
+# Cloudinary (imagens públicas)
+CLOUDINARY_NAME=
+CLOUDINARY_KEY=
+CLOUDINARY_SECRET=
+
+# E-mail
+RESEND_API_KEY=
+EMAIL_FROM=
+
+# Rate limit
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+
+# Cron
+CRON_SECRET=
+```
+
+---
+
+## Apêndice B — Checklist de setup (Release 0)
+
+- [ ] Confirmar nome, domínio e identidade visual
+- [ ] Criar conta Cloudflare, habilitar Stream e criar bucket R2 privado
+- [ ] Gerar chave de assinatura do Stream (`KEY_ID` + JWK)
+- [ ] Confirmar credenciais e plano do MySQL
+- [ ] Confirmar conta Stripe (produto, PIX, parcelamento)
+- [ ] Reescrever `prisma/schema.prisma` com o modelo da Parte 8
+- [ ] Remover rotas, componentes e dependências do domínio Courtesyfy
+- [ ] Criar seed com a conta `ADMIN` da Dra.
+- [ ] Ajustar `middleware.ts`, `next.config.ts` (CSP) e `lib/email.ts`
+- [ ] Configurar domínio na Vercel e variáveis de ambiente de produção
+- [ ] `npm run build` limpo e deploy inicial no ar
+
+---
+
+*Documento vivo. Última atualização: 2026-08-20.*

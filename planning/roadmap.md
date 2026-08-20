@@ -1,114 +1,101 @@
-# Courtesyfy — Roadmap do Produto
+# Roadmap do Produto
 
-## Visão de Longo Prazo
+## Visão de longo prazo
 
-Tornar o Courtesyfy a plataforma de referência para gestão de campanhas promocionais com
-chaves únicas no Brasil — do pequeno lojista ao grande varejista com múltiplas unidades.
+Ser a casa digital da Dra. Karollyne Morais: onde o conteúdo dela vive, onde os alunos dela
+compram e estudam, e onde a base de alunos e os dados ficam sob controle dela — sem taxa de
+marketplace e sem concorrente na mesma tela.
 
----
-
-## MVP + P0 (v1.0.x — Concluído, Maio 2026) ✅
-
-### Infraestrutura
-- [x] Autenticação (email + Google OAuth + verificação)
-- [x] Schema Prisma completo para o domínio
-- [x] Design system dark mode
-- [x] Suite de testes Vitest (77 testes)
-
-### Loja & Planos
-- [x] Onboarding de loja com logo
-- [x] Planos: Essencial / Profissional / Empresarial
-- [x] Stripe: assinatura com trial 14 dias + webhook
-- [x] Landing page com CTAs para planos e kits físicos
-
-### Campanhas & Chaves
-- [x] Criação de campanha (6 tipos de benefício)
-- [x] Geração de lote de chaves únicas com QR Code
-- [x] Exportação impressão A4 + CSV
-- [x] Designer visual de layout (cores, imagens, estilos, tamanhos)
-- [x] Migração de chaves entre campanhas
-
-### Fluxo do Cliente
-- [x] Landing pública `/c/[codigo]` com identidade da campanha
-- [x] Ativação com tel/email + email de confirmação (Resend)
-- [x] Validação no balcão + modo totem
-- [x] Histórico de resgates
-
-### Clientes
-- [x] Listagem com busca + detalhe com histórico
-
-### Produtos Físicos
-- [x] 3 linhas de kits; checkout público com allowlist
-
-### Super Admin
-- [x] Painel Stripe completo (MRR, assinantes, eventos, produtos)
-- [x] Gerenciamento de solicitações de impressão (lista + preview do arquivo)
-
-### API & Automação
-- [x] `POST /api/chaves/validar` — API pública para PDV/totem (HMAC-SHA256)
-- [x] `GET /api/cron/expirar-chaves` — expiração automática via Vercel Cron (03:00 UTC)
-- [x] Rate limiting com Upstash Redis (fallback in-memory)
+Detalhamento completo em [`spec.md`](../spec.md) → Parte 12.
 
 ---
 
-## P1 — Segurança & Estabilidade (v1.1.0 — Próximo)
+## R0 — Fundação (limpeza) · ~1 semana · 🔵 em andamento
 
-- [ ] **Headers de segurança HTTP** — CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
-- [ ] **Rate limit no login** — brute-force protection em `/api/auth/login-and-redirect`
-- [ ] **Remover logs de debug** — `criar-campanha.ts` e código OTP em `resend-verification`
-- [ ] **Upstash Redis em produção** — configurar nas vars da Vercel para rate limit distribuído
-- [ ] **Validação de env vars no startup** — Zod schema em `src/lib/env.ts`
-- [ ] **Enumeração de e-mail** — padronizar respostas de verify/resend para não vazar existência
+- [ ] Confirmar nome, domínio e identidade visual
+- [ ] Criar conta Cloudflare (Stream + bucket R2 privado) e gerar credenciais
+- [ ] Reescrever `prisma/schema.prisma` com o modelo da spec
+- [ ] Remover rotas, componentes, modelos e dependências do domínio Courtesyfy
+- [ ] Seed com a conta `ADMIN` da Dra.
+- [ ] Ajustar `middleware.ts`, `next.config.ts` (CSP) e `lib/email.ts`
+- [ ] Configurar domínio e variáveis de ambiente na Vercel
+- [ ] `npm run build` limpo e deploy inicial
 
----
-
-## P2 — Crescimento de Produto (v1.2.0 — Q3 2026)
-
-- [ ] **Gráficos no dashboard** — taxa de ativação, conversão, resgates por período (Recharts)
-- [ ] **Filtros avançados** — por status, campanha, período, lote nas listagens de chaves
-- [ ] **Portal Stripe do lojista** — autogestão de assinatura (upgrade/downgrade/cancelar)
-- [ ] **Cache ISR nas páginas públicas** — `/c/[codigo]` com `revalidate: 60`
-- [ ] **Paginação cursor-based** — resgates, chaves, clientes
-- [ ] **Email de boas-vindas** ao novo lojista pós-onboarding
-- [ ] **Notificação ao lojista** quando chave é resgatada (email ou push)
-- [ ] **Cancelamento em lote** de chaves pelo lojista
+**Entrega:** projeto limpo, buildando, autenticando e no ar.
 
 ---
 
-## P3 — Expansão (Q4 2026+)
+## R1 — Núcleo do conteúdo · ~2 semanas · ⚪ planejado
 
-- [ ] **LGPD** — exportação e exclusão de dados do cliente
-- [ ] **2FA TOTP** para lojistas (Google Authenticator / Authy)
-- [ ] **Logging estruturado de segurança** — falhas de auth, API key inválida, acesso negado
-- [ ] **Documentação OpenAPI** da API pública
-- [ ] **Testes E2E** com Playwright
-- [ ] **Duplicar campanha** (clonar configurações)
-- [ ] **Importação de lotes via CSV**
-- [ ] **QR Code customizado** com logo da loja
+**É o marco mais importante do projeto.**
 
----
+- [ ] Painel: CRUD de curso, módulo e aula com reordenação
+- [ ] Upload de vídeo direto do browser para o Cloudflare Stream
+- [ ] Webhook do Stream (duração e status `ready`)
+- [ ] Upload de materiais (PDF/slide) para o R2
+- [ ] `lib/acesso.ts` — ponto único de verificação de matrícula
+- [ ] Sala de aula: sidebar, player com token assinado, materiais
+- [ ] Marca d'água dinâmica com dados do aluno
+- [ ] Progresso por aula e percentual do curso
+- [ ] Concessão manual de matrícula
 
-## P4 — Escala & White-label (2027+)
-
-- [ ] White-label por loja (domínio customizado)
-- [ ] Multi-unidade e franquias (uma conta, várias lojas)
-- [ ] API de integração com ecommerce (WooCommerce, Shopify)
-- [ ] Sorteio automatizado no fechamento da campanha
-- [ ] App mobile para operadores (PWA ou React Native)
-- [ ] Relatórios com BI embutido
+**Entrega:** a Dra. sobe um curso inteiro e um aluno de teste assiste do começo ao fim.
 
 ---
 
-## KPIs a Monitorar
+## R2 — Venda · ~1,5 semana · ⚪ planejado
 
-- Lojas cadastradas e ativas (assinatura paga)
-- MRR (receita recorrente mensal)
-- Campanhas ativas no período
-- Taxa de ativação: chaves ativadas / geradas
-- Taxa de conversão: chaves resgatadas / ativadas
-- Churn de assinaturas
-- Volume de kits físicos vendidos
+- [ ] Catálogo `/cursos`
+- [ ] Página de vendas `/cursos/[slug]` com ementa e aula de amostra
+- [ ] Checkout Stripe + página de sucesso
+- [ ] Webhook idempotente → pedido + matrícula automática
+- [ ] Reembolso revoga acesso
+- [ ] E-mails transacionais (acesso liberado)
+- [ ] Painel de pedidos
+
+**Entrega:** dá para vender.
 
 ---
 
-*Atualizado em: 2026-05-20*
+## R3 — Landing e certificado · ~1,5 semana · ⚪ planejado
+
+- [ ] Landing page completa (referência: lp.cademi.com.br, adaptada)
+- [ ] Geração do certificado em PDF
+- [ ] Página pública de validação `/certificados/[codigo]`
+- [ ] Depoimentos e FAQ gerenciáveis
+- [ ] SEO, Open Graph e dados estruturados `Course`
+
+**Entrega:** dá para divulgar.
+
+---
+
+## R4 — Lançamento · ~1 semana · ⚪ planejado
+
+- [ ] Termos de uso e política de privacidade
+- [ ] Analytics
+- [ ] Teste ponta a ponta do fluxo de compra
+- [ ] Carga do conteúdo real
+- [ ] Revisão de segurança e de custo do Stream
+- [ ] Revisão dos textos quanto à publicidade médica (CFM)
+
+**Entrega:** v1.0 no ar.
+
+---
+
+## v1.1 e além
+
+- Comentários e dúvidas por aula, com resposta da Dra.
+- Quizzes e provas
+- Cupons de desconto
+- Drip content (liberação programada de módulos)
+- Anotações do aluno com marcação de tempo
+- Retenção por aula (onde os alunos param)
+- Assinatura recorrente com acesso a todos os cursos
+- Limite de sessões simultâneas (antipirataria)
+- PWA com download offline
+- Notificação por WhatsApp
+- Emissão automática de nota fiscal
+
+---
+
+*Atualizado em: 2026-08-20*
