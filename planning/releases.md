@@ -286,4 +286,39 @@ O aluno finalmente assiste. E os links passam a levar a algum lugar.
 
 ---
 
+## v0.6.1 — 2026-08-20 — Deploy na Vercel
+
+**No ar:** https://plataformadrakarollynemorais.vercel.app
+
+**Preparação para produção**
+- **Indexação por buscadores virou opt-in.** Só liga com
+  `NEXT_PUBLIC_PERMITIR_INDEXACAO=true`. Enquanto a landing tiver texto de
+  preenchimento sobre uma médica real, ela não pode entrar no Google — conteúdo
+  indexado é difícil de tirar do índice depois
+- `src/app/robots.ts` — `Disallow: /` enquanto a indexação estiver desligada
+- `metadataBase` passa a usar `VERCEL_URL` quando não há domínio próprio; antes
+  gerava links canônicos apontando para um domínio que não existe
+- `scripts/vercel-env.mjs` (`npm run vercel:env`) — envia o `.env` local para a
+  Vercel pelo CLI do próprio usuário, com os valores indo por stdin
+
+**Corrigido**
+- **A landing era gerada estática no build.** Como o catálogo agora lê o banco,
+  um curso publicado só apareceria no deploy seguinte. Passou a ISR de 5 min, e
+  publicar/despublicar chama `revalidatePath("/")` para refletir na hora
+- **`/robots.txt` respondia 307 em produção.** O middleware exigia sessão para
+  qualquer caminho fora da lista pública, e o `matcher` não excluía arquivos de
+  raiz. Adicionada lista explícita: robots, sitemap, manifest, ícones
+
+**Verificado em produção**
+- Rotas públicas 200; `/aluno` e `/admin` 307 para o login
+- Catálogo mostra "Osteometabolica" — leitura do banco funcionando na Vercel
+- Página do curso monta a ementa com "Aula 01 · 1h 44min"
+- `<meta name="robots" content="noindex, nofollow">` presente
+- `robots.txt` servindo `Disallow: /`
+
+**Pendente:** as variáveis do Cloudflare Stream ainda não estão na Vercel — o
+vídeo não vai tocar em produção até `npm run vercel:env` rodar.
+
+---
+
 *Próxima versão prevista: v0.7.0 — materiais em R2 e certificado*
