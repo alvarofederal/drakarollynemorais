@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { Aviso, Campo, botaoPrimario, botaoSecundario, inputBase } from "@/app/admin/_components/ui"
 import { precoParaCentavos } from "@/lib/formato"
+import { UploadImagem } from "@/app/admin/_components/upload-imagem"
 import { atualizarCurso, criarCurso } from "../_actions/curso"
 
 export type CursoFormValores = {
@@ -12,6 +13,7 @@ export type CursoFormValores = {
   titulo: string
   subtitulo: string
   descricao: string
+  capaUrl: string | null
   nivel: "INTRODUTORIO" | "INTERMEDIARIO" | "AVANCADO"
   cargaHorariaMinutos: number
   precoCentavos: number
@@ -26,12 +28,13 @@ const VAZIO: CursoFormValores = {
   titulo: "",
   subtitulo: "",
   descricao: "",
+  capaUrl: null,
   nivel: "INTRODUTORIO",
   cargaHorariaMinutos: 0,
   precoCentavos: 0,
   precoDeCentavos: null,
-  tipoAcesso: "VITALICIO",
-  acessoDias: null,
+  tipoAcesso: "PRAZO_DIAS",
+  acessoDias: 365,
   emiteCertificado: true,
   percentualParaCertificado: 100,
 }
@@ -69,6 +72,7 @@ export function CursoForm({ inicial }: { inicial?: CursoFormValores }) {
       titulo: v.titulo,
       subtitulo: v.subtitulo,
       descricao: v.descricao,
+      capaUrl: v.capaUrl,
       nivel: v.nivel,
       cargaHorariaMinutos: Number(v.cargaHoraria) || 0,
       precoCentavos: precoParaCentavos(v.preco),
@@ -131,6 +135,19 @@ export function CursoForm({ inicial }: { inicial?: CursoFormValores }) {
           value={v.descricao}
           onChange={(e) => alterar("descricao", e.target.value)}
           placeholder="Para quem é o curso, o que ele cobre e por que vale a pena."
+        />
+      </Campo>
+
+      <Campo
+        rotulo="Capa do curso"
+        htmlFor="capa"
+        dica="Fica no topo da fileira do curso na área do aluno. Ideal: 1680×720 (21:9)."
+        className="max-w-md"
+      >
+        <UploadImagem
+          valor={v.capaUrl}
+          aoMudar={(url) => alterar("capaUrl", url)}
+          proporcao="21/9"
         />
       </Campo>
 

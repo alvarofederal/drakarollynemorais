@@ -32,6 +32,8 @@ export default async function EditarCursoPage({
             select: {
               id: true,
               titulo: true,
+              descricao: true,
+              capaUrl: true,
               tipo: true,
               gratuita: true,
               publicada: true,
@@ -109,6 +111,7 @@ export default async function EditarCursoPage({
               titulo: curso.titulo,
               subtitulo: curso.subtitulo ?? "",
               descricao: curso.descricao ?? "",
+              capaUrl: curso.capaUrl,
               nivel: curso.nivel,
               cargaHorariaMinutos: curso.cargaHorariaMinutos,
               precoCentavos: curso.precoCentavos,

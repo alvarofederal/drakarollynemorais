@@ -25,10 +25,13 @@ import {
   moverModulo,
 } from "../../_actions/estrutura"
 import { UploadVideo } from "./upload-video"
+import { EditarAula, type AulaEditavel } from "./editar-aula"
 
 type Aula = {
   id: string
   titulo: string
+  descricao: string | null
+  capaUrl: string | null
   tipo: "VIDEO" | "TEXTO" | "PDF"
   gratuita: boolean
   publicada: boolean
@@ -53,6 +56,7 @@ export function Estrutura({ cursoId, modulos }: { cursoId: string; modulos: Modu
   const [aulaEm, setAulaEm] = useState<string | null>(null)
   const [tituloAula, setTituloAula] = useState("")
   const [tipoAula, setTipoAula] = useState<"VIDEO" | "TEXTO" | "PDF">("VIDEO")
+  const [editando, setEditando] = useState<AulaEditavel | null>(null)
 
   /** Roda a ação, mostra o erro se houver e recarrega os dados do servidor. */
   function executar(acao: () => Promise<{ ok: boolean; error?: string }>) {
@@ -143,8 +147,25 @@ export function Estrutura({ cursoId, modulos }: { cursoId: string; modulos: Modu
                   <li key={aula.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
                     <Icone className="size-4 shrink-0 text-km-ink-faint" />
 
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm text-km-ink">{aula.titulo}</span>
+                    <div className="flex min-w-0 flex-1 flex-col items-start">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditando({
+                            id: aula.id,
+                            moduloId: modulo.id,
+                            titulo: aula.titulo,
+                            descricao: aula.descricao,
+                            capaUrl: aula.capaUrl,
+                            tipo: aula.tipo,
+                            gratuita: aula.gratuita,
+                          })
+                        }
+                        className="max-w-full truncate text-left text-sm text-km-ink transition-colors hover:text-km-brand"
+                        title="Editar aula"
+                      >
+                        {aula.titulo}
+                      </button>
                       <span className="flex flex-wrap items-center gap-x-2 font-mono text-[10px] text-km-ink-faint">
                         <span>{aula.publicada ? "publicada" : "rascunho"}</span>
                         {aula.gratuita && <span className="text-km-brand">· amostra</span>}
@@ -299,6 +320,8 @@ export function Estrutura({ cursoId, modulos }: { cursoId: string; modulos: Modu
           Adicionar módulo
         </button>
       </form>
+
+      <EditarAula aula={editando} aoFechar={() => setEditando(null)} />
     </div>
   )
 }

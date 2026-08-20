@@ -32,30 +32,74 @@ export async function exigirAdmin(): Promise<Sessao> {
   return session
 }
 
+/** Por que a pessoa tem (ou não tem) acesso. A UI usa isso para explicar. */
+export type MotivoDeAcesso =
+  | "ADMIN"
+  | "ASSINATURA"
+  | "COMPRA"
+  | "SEM_ACESSO"
+
 /**
- * O aluno tem acesso ao curso?
+ * A assinatura da comunidade está valendo?
  *
- * Verdadeiro só quando existe matrícula ATIVA e dentro do prazo.
- * ADMIN enxerga tudo — ela precisa pré-visualizar o que publica.
+ * Vale enquanto `ATIVA` e dentro do período pago. Quem cancelou continua com
+ * acesso até `acessoAte` — ele já pagou por aquele mês.
+ * `INADIMPLENTE` também passa: é a tolerância para cartão recusado, que
+ * acontece o tempo todo e não deve cortar o acesso na hora.
  */
-export async function verificarAcesso(
+export async function temAssinaturaAtiva(userId: string): Promise<boolean> {
+  const agora = new Date()
+
+  const assinatura = await prisma.assinatura.findFirst({
+    where: {
+      userId,
+      status: { in: ["ATIVA", "INADIMPLENTE"] },
+      OR: [{ renovaEm: { gt: agora } }, { acessoAte: { gt: agora } }],
+    },
+    select: { id: true },
+  })
+
+  return !!assinatura
+}
+
+/**
+ * A pessoa tem acesso a este curso — e por quê.
+ *
+ * São duas portas, e basta uma:
+ *   1. assinatura ativa da comunidade → todos os cursos
+ *   2. matrícula ativa e dentro do prazo → aquele curso
+ *
+ * ADMIN enxerga tudo, porque precisa pré-visualizar o que publica.
+ */
+export async function motivoDeAcesso(
   userId: string,
   cursoId: string,
   papel?: string
-): Promise<boolean> {
-  if (papel === "ADMIN") return true
+): Promise<MotivoDeAcesso> {
+  if (papel === "ADMIN") return "ADMIN"
+
+  if (await temAssinaturaAtiva(userId)) return "ASSINATURA"
 
   const matricula = await prisma.matricula.findUnique({
     where: { userId_cursoId: { userId, cursoId } },
     select: { status: true, expiraEm: true },
   })
 
-  if (!matricula) return false
-  if (matricula.status !== "ATIVA") return false
+  if (!matricula) return "SEM_ACESSO"
+  if (matricula.status !== "ATIVA") return "SEM_ACESSO"
   // expiraEm nulo = acesso vitalício
-  if (matricula.expiraEm && matricula.expiraEm <= new Date()) return false
+  if (matricula.expiraEm && matricula.expiraEm <= new Date()) return "SEM_ACESSO"
 
-  return true
+  return "COMPRA"
+}
+
+/** Versão booleana, para quando o motivo não importa. */
+export async function verificarAcesso(
+  userId: string,
+  cursoId: string,
+  papel?: string
+): Promise<boolean> {
+  return (await motivoDeAcesso(userId, cursoId, papel)) !== "SEM_ACESSO"
 }
 
 /**

@@ -82,7 +82,7 @@ export async function criarAula(entrada: unknown): Promise<Resultado> {
   const parsed = aulaSchema.safeParse(entrada)
   if (!parsed.success) return { ok: false, error: parsed.error.errors[0].message }
 
-  const { moduloId, titulo, descricao, tipo, gratuita } = parsed.data
+  const { moduloId, titulo, descricao, capaUrl, tipo, gratuita } = parsed.data
 
   const modulo = await prisma.modulo.findUnique({
     where: { id: moduloId },
@@ -95,6 +95,12 @@ export async function criarAula(entrada: unknown): Promise<Resultado> {
     orderBy: { ordem: "desc" },
     select: { ordem: true },
   })
+
+  // A PRIMEIRA aula do curso nasce gratuita: é a amostra que explica o que
+  // o curso cobre. Depois disso vira uma chave que a Dra. liga onde quiser —
+  // marcar por posição quebraria no dia em que ela reordenasse os módulos.
+  const jaExisteAula = await prisma.aula.count({ where: { modulo: { cursoId: modulo.cursoId } } })
+  const ehPrimeiraDoCurso = jaExisteAula === 0
 
   // slug é único por módulo (@@unique([moduloId, slug]))
   const base = gerarSlug(titulo) || "aula"
@@ -109,8 +115,9 @@ export async function criarAula(entrada: unknown): Promise<Resultado> {
       slug,
       titulo,
       descricao: descricao || null,
+      capaUrl: capaUrl || null,
       tipo,
-      gratuita,
+      gratuita: gratuita || ehPrimeiraDoCurso,
       ordem: (ultima?.ordem ?? -1) + 1,
       publicada: false,
     },
@@ -126,11 +133,11 @@ export async function atualizarAula(id: string, entrada: unknown): Promise<Resul
   const parsed = aulaSchema.safeParse(entrada)
   if (!parsed.success) return { ok: false, error: parsed.error.errors[0].message }
 
-  const { titulo, descricao, tipo, gratuita } = parsed.data
+  const { titulo, descricao, capaUrl, tipo, gratuita } = parsed.data
 
   const aula = await prisma.aula.update({
     where: { id },
-    data: { titulo, descricao: descricao || null, tipo, gratuita },
+    data: { titulo, descricao: descricao || null, capaUrl: capaUrl || null, tipo, gratuita },
     select: { modulo: { select: { cursoId: true } } },
   })
 

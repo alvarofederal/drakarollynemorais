@@ -36,6 +36,8 @@ enum Role {
 enum TokenType {
   EMAIL_VERIFICATION
   PASSWORD_RESET
+  /// Conta criada pelo download do livro, sem senha definida ainda
+  DEFINIR_SENHA
 }
 
 model User {
@@ -63,6 +65,8 @@ model User {
   progressos   ProgressoAula[]
   certificados Certificado[]
   pedidos      Pedido[]
+  assinaturas  Assinatura[]
+  downloads    DownloadEbook[]
   logsEventos  LogEvento[]
 
   criadoEm     DateTime @default(now())
@@ -240,9 +244,9 @@ model Curso {
   precoDeCentavos Int?
   stripePriceId   String?
 
-  tipoAcesso TipoAcesso @default(VITALICIO)
+  tipoAcesso TipoAcesso @default(PRAZO_DIAS)
   /// Dias de acesso quando tipoAcesso = PRAZO_DIAS
-  acessoDias Int?
+  acessoDias Int?       @default(365)
 
   status      StatusCurso @default(RASCUNHO)
   publicadoEm DateTime?
@@ -279,6 +283,7 @@ model Modulo {
   cursoId   String
   titulo    String
   descricao String? @db.Text
+  capaUrl   String?
   ordem     Int     @default(0)
 
   /// Liberação programada (drip content) — v1.1
@@ -299,9 +304,16 @@ model Aula {
   moduloId  String
   slug      String
   titulo    String
+  /// Texto do balão que explica o que a aula cobre
   descricao String? @db.Text
+  /// Capa do card. Cada aula tem a sua — é o que monta a fileira.
+  capaUrl   String?
 
   tipo TipoAula @default(VIDEO)
+
+  /// Transmissão ao vivo: o Cloudflare grava e a gravação vira aula
+  ehLive Boolean   @default(false)
+  liveEm DateTime?
 
   /// UID do vídeo no Cloudflare Stream. Nulo até o upload terminar.
   videoUid        String?
@@ -595,6 +607,9 @@ enum TipoEvento {
   CERTIFICADO_EMITIDO
   LOGIN
   CADASTRO
+  ASSINATURA_CRIADA
+  ASSINATURA_CANCELADA
+  EBOOK_BAIXADO
 }
 
 /// Trilha de auditoria. Registro imutável de cada ação relevante.
@@ -616,4 +631,140 @@ model LogEvento {
   @@index([tipo])
   @@index([criadoEm])
   @@map("logs_eventos")
+}
+
+// ─────────────────────────────────────────
+// COMUNIDADE (assinatura recorrente)
+// ─────────────────────────────────────────
+
+enum IntervaloPlano {
+  MENSAL
+  ANUAL
+}
+
+enum StatusAssinatura {
+  ATIVA
+  INADIMPLENTE
+  CANCELADA
+  EXPIRADA
+}
+
+/// Plano da comunidade. É tabela, e não constante no código, justamente para
+/// permitir reajuste sem precisar de deploy.
+model Plano {
+  id            String         @id @default(cuid())
+  nome          String
+  slug          String         @unique
+  descricao     String?        @db.Text
+  /// Preço vigente para NOVAS adesões
+  precoCentavos Int
+  intervalo     IntervaloPlano @default(MENSAL)
+  ativo         Boolean        @default(true)
+  stripePriceId String?
+
+  assinaturas Assinatura[]
+  reajustes   ReajustePlano[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("planos")
+}
+
+/// Histórico e agendamento de reajustes.
+model ReajustePlano {
+  id            String    @id @default(cuid())
+  planoId       String
+  precoAnterior Int
+  precoNovo     Int
+  /// Quando passa a valer para quem JÁ é assinante
+  vigenteEm     DateTime
+  /// Nulo enquanto agendado; preenchido quando aplicado
+  aplicadoEm    DateTime?
+  observacao    String?
+
+  plano Plano @relation(fields: [planoId], references: [id], onDelete: Cascade)
+
+  criadoEm DateTime @default(now())
+
+  @@index([planoId])
+  @@map("reajustes_plano")
+}
+
+/// Assinatura da comunidade: dá acesso a todos os cursos enquanto ativa.
+model Assinatura {
+  id      String           @id @default(cuid())
+  userId  String
+  planoId String
+  status  StatusAssinatura @default(ATIVA)
+
+  /// Preço que ESTE assinante paga. Congelado na adesão — é o que impede um
+  /// reajuste de atingir retroativamente quem entrou antes dele.
+  valorCentavos Int
+
+  iniciadaEm DateTime @default(now())
+  /// Fim do período já pago
+  renovaEm   DateTime
+
+  canceladaEm DateTime?
+  /// Até quando o acesso continua depois de cancelar
+  acessoAte   DateTime?
+
+  stripeSubscriptionId String? @unique
+  stripeCustomerId     String?
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plano Plano @relation(fields: [planoId], references: [id])
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([userId])
+  @@index([planoId])
+  @@index([status])
+  @@map("assinaturas")
+}
+
+// ─────────────────────────────────────────
+// LIVRO (isca de entrada)
+// ─────────────────────────────────────────
+
+model Ebook {
+  id        String  @id @default(cuid())
+  slug      String  @unique
+  titulo    String
+  subtitulo String?
+  descricao String? @db.Text
+  capaUrl   String?
+
+  /// Chave do objeto no bucket privado (R2). Nunca é URL pública.
+  arquivoKey String
+  paginas    Int?
+
+  publicado Boolean @default(false)
+
+  downloads DownloadEbook[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("ebooks")
+}
+
+model DownloadEbook {
+  id      String  @id @default(cuid())
+  ebookId String
+  userId  String
+  /// De onde veio a pessoa: utm_source, "instagram", "bio"…
+  origem  String?
+  ip      String? @db.VarChar(45)
+
+  ebook Ebook @relation(fields: [ebookId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  criadoEm DateTime @default(now())
+
+  @@index([ebookId])
+  @@index([userId])
+  @@map("downloads_ebook")
 }

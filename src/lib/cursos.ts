@@ -1,5 +1,5 @@
 import prisma from "./prisma"
-import { verificarAcesso } from "./acesso"
+import { temAssinaturaAtiva, verificarAcesso, type MotivoDeAcesso } from "./acesso"
 
 /**
  * Consultas de leitura de curso usadas pelas páginas públicas e pela área do
@@ -220,3 +220,100 @@ export async function obterSalaDeAula(opcoes: {
 }
 
 export type Trilha = NonNullable<Awaited<ReturnType<typeof obterSalaDeAula>>>["trilha"]
+
+/**
+ * A vitrine da área do aluno: todos os cursos publicados, cada um com o estado
+ * de acesso de cada aula já resolvido.
+ *
+ * Monta em três consultas, não em N+1: cursos, matrículas e progressos vêm de
+ * uma vez e são cruzados em memória.
+ *
+ * ⚠️ NÃO seleciona `videoUid`. O identificador do vídeo não tem por que sair do
+ * servidor numa listagem — só na sala de aula, e só da aula liberada.
+ */
+export async function listarVitrineDoAluno(userId: string, papel?: string) {
+  const agora = new Date()
+
+  const [cursos, matriculas, progressos, assinante] = await Promise.all([
+    prisma.curso.findMany({
+      where: { status: "PUBLICADO" },
+      orderBy: [{ destaque: "desc" }, { ordem: "asc" }, { publicadoEm: "desc" }],
+      select: {
+        id: true,
+        slug: true,
+        titulo: true,
+        subtitulo: true,
+        capaUrl: true,
+        cargaHorariaMinutos: true,
+        precoCentavos: true,
+        acessoDias: true,
+        tipoAcesso: true,
+        modulos: {
+          orderBy: { ordem: "asc" },
+          select: {
+            id: true,
+            titulo: true,
+            aulas: {
+              where: { publicada: true },
+              orderBy: { ordem: "asc" },
+              select: {
+                id: true,
+                slug: true,
+                titulo: true,
+                descricao: true,
+                capaUrl: true,
+                tipo: true,
+                gratuita: true,
+                duracaoSegundos: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.matricula.findMany({
+      where: { userId },
+      select: { cursoId: true, status: true, expiraEm: true, percentualConcluido: true },
+    }),
+    prisma.progressoAula.findMany({
+      where: { userId, concluida: true },
+      select: { aulaId: true },
+    }),
+    temAssinaturaAtiva(userId),
+  ])
+
+  const porCurso = new Map(matriculas.map((m) => [m.cursoId, m]))
+  const concluidas = new Set(progressos.map((p) => p.aulaId))
+
+  return cursos.map((curso) => {
+    const matricula = porCurso.get(curso.id)
+    const compraValida =
+      matricula?.status === "ATIVA" &&
+      (!matricula.expiraEm || matricula.expiraEm > agora)
+
+    const temAcesso = papel === "ADMIN" || assinante || !!compraValida
+    const motivo: MotivoDeAcesso =
+      papel === "ADMIN" ? "ADMIN" : assinante ? "ASSINATURA" : compraValida ? "COMPRA" : "SEM_ACESSO"
+
+    const aulas = curso.modulos.flatMap((m) =>
+      m.aulas.map((a) => ({
+        ...a,
+        moduloTitulo: m.titulo,
+        // A amostra gratuita é a única exceção ao portão
+        liberada: temAcesso || a.gratuita,
+        concluida: concluidas.has(a.id),
+      }))
+    )
+
+    return {
+      curso,
+      temAcesso,
+      motivo,
+      percentual: matricula?.percentualConcluido ?? 0,
+      expiraEm: matricula?.expiraEm ?? null,
+      aulas,
+    }
+  })
+}
+
+export type ItemDaVitrine = Awaited<ReturnType<typeof listarVitrineDoAluno>>[number]
