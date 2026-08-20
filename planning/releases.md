@@ -321,4 +321,58 @@ vídeo não vai tocar em produção até `npm run vercel:env` rodar.
 
 ---
 
-*Próxima versão prevista: v0.7.0 — materiais em R2 e certificado*
+## v0.7.0 — 2026-08-20 — Vitrine, comunidade e capas
+
+**Área do aluno reconstruída**
+- Uma fileira por curso, de fora a fora, com a capa do curso ao fundo
+- Cards de aula em pé (pôster 2:3) com capa própria, selo de grátis, cadeado
+  nos bloqueados e balão dizendo o que a aula cobre
+- Fita horizontal com scroll-snap e setas; no celular rola com o dedo
+- `/aluno` passa a listar **todos** os cursos publicados — aluno novo precisa
+  ver o catálogo com os cadeados, não uma tela vazia
+- Card bloqueado é `<button>`, nunca link morto
+
+**Painel de acesso** (o que abre no cadeado)
+- Duas saídas lado a lado: comprar o curso ou assinar a comunidade
+- Decide no contexto, sem pular de página — pular perde a pessoa
+- Sem WhatsApp configurado, cai na página do curso. Nunca fica sem saída
+
+**Comunidade — schema novo**
+- `Plano`, `ReajustePlano`, `Assinatura`
+- O preço fica congelado em `Assinatura.valorCentavos`: sem isso um reajuste
+  atingiria retroativamente quem entrou antes dele
+- `ReajustePlano` guarda o histórico e permite agendar o próximo
+
+**Acesso — duas portas**
+- `verificarAcesso` passa a aceitar matrícula no curso **ou** assinatura ativa
+- `motivoDeAcesso()` diz *por que* tem acesso, para a UI explicar
+- `INADIMPLENTE` ainda passa: tolerância para cartão recusado
+- `listarVitrineDoAluno` **não** seleciona `videoUid` — identificador de vídeo
+  não tem por que sair do servidor numa listagem
+
+**Conteúdo**
+- `Curso` e `Aula` ganham `capaUrl`; `Aula` ganha `ehLive` / `liveEm`
+- Diálogo de edição de aula: capa, descrição (o balão) e aula gratuita
+- Upload de imagem reutilizável (Cloudinary)
+- A primeira aula de um curso **nasce gratuita**; depois vira chave editável —
+  marcar por posição quebraria ao reordenar os módulos
+- Curso nasce com **365 dias** de acesso em vez de vitalício
+
+**Paleta**
+- Fundo `#070a09` → `#08090a`: preto neutro, sem o cast verde
+- Verde vira acento `#34d399`, mais luminoso (verde escuro morre em preto)
+- Contrastes: título 18:1, corpo 8:1, verde 9.75:1, terciário 5.6:1
+
+**Livro — só o schema**
+- `Ebook` e `DownloadEbook` criados; `TokenType` ganha `DEFINIR_SENHA`
+- A página `/livro` ainda não existe: depende do bucket R2, não criado
+
+**Verificado**
+- Vitrine: aula gratuita como link, bloqueadas como botão com rótulo acessível
+- Painel abre com os dois preços (R$ 497,00 e R$ 49,90/mês)
+- `tsc` limpo · 60 testes · build de produção exit 0
+- Produção servindo a paleta nova
+
+---
+
+*Próxima versão prevista: v0.8.0 — página do livro (depende do R2) e lives*
