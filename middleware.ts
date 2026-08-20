@@ -21,11 +21,28 @@ const ROTAS_PUBLICAS = [
   "/politica-de-privacidade",
 ]
 
+/**
+ * Arquivos que os buscadores e o navegador pedem na raiz. Precisam responder
+ * sem sessão — o `matcher` abaixo não os exclui, então a lista é aqui.
+ */
+const ARQUIVOS_PUBLICOS = [
+  "/robots.txt",
+  "/sitemap.xml",
+  "/manifest.json",
+  "/manifest.webmanifest",
+  "/favicon.ico",
+  "/opengraph-image",
+  "/apple-icon",
+  "/icon",
+]
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const ehPublica =
-    pathname === "/" || ROTAS_PUBLICAS.some((rota) => pathname.startsWith(rota))
+    pathname === "/" ||
+    ARQUIVOS_PUBLICOS.some((arquivo) => pathname.startsWith(arquivo)) ||
+    ROTAS_PUBLICAS.some((rota) => pathname.startsWith(rota))
 
   if (ehPublica) return NextResponse.next()
 
