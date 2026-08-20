@@ -15,7 +15,7 @@ export function AdminNav() {
 
   return (
     <nav
-      className="mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-5 sm:px-8"
+      className="mx-auto flex w-full gap-1 overflow-x-auto px-5 sm:px-8"
       aria-label="Seções do painel"
     >
       {ITENS.map((item) => {

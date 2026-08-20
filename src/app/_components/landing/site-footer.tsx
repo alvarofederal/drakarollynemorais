@@ -7,7 +7,7 @@ export function SiteFooter() {
 
   return (
     <footer className="border-t border-km-line bg-km-bg">
-      <div className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8">
+      <div className="mx-auto w-full px-5 py-14 sm:px-8">
         <div className="flex flex-col gap-10 sm:flex-row sm:justify-between">
           <div className="flex max-w-xs flex-col gap-3">
             <span className="font-display text-lg font-semibold text-km-ink">

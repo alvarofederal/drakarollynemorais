@@ -1,4 +1,5 @@
 import Image from "next/image"
+import Link from "next/link"
 import {
   Award,
   FileDown,
@@ -12,7 +13,6 @@ import {
 import {
   comoFunciona,
   ctaFinal,
-  cursos,
   depoimentos,
   marca,
   numeros,
@@ -21,6 +21,8 @@ import {
   sobre,
 } from "@/config/landing"
 import { cn } from "@/lib/utils"
+import { contarAulas, listarCursosDoCatalogo } from "@/lib/cursos"
+import { formatarDuracao, formatarPreco } from "@/lib/formato"
 
 const ICONES: Record<string, LucideIcon> = {
   PlayCircle,
@@ -53,7 +55,7 @@ function Secao({
         className
       )}
     >
-      <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">{children}</div>
+      <div className="mx-auto w-full px-5 sm:px-8">{children}</div>
     </section>
   )
 }
@@ -161,7 +163,10 @@ export function OQueRecebe() {
 
 /* ─── catálogo ───────────────────────────────────────────────── */
 
-export function Catalogo() {
+export async function Catalogo() {
+  // Vem do banco: só cursos PUBLICADO. Rascunho da Dra. não aparece aqui.
+  const cursos = await listarCursosDoCatalogo()
+
   return (
     <Secao id="cursos" fundo="recuado">
       <TituloSecao eyebrow="Cursos" titulo="Escolha por onde começar." />
@@ -195,24 +200,40 @@ export function Catalogo() {
         </div>
       ) : (
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {cursos.map((curso) => (
-            <article
-              key={curso.slug}
-              className="flex flex-col gap-4 rounded-xl border border-km-line bg-km-surface p-6 transition-shadow hover:shadow-[0_16px_40px_-24px_rgba(18,26,22,0.4)]"
-            >
-              <div className="flex flex-col gap-2">
-                <h3 className="font-display text-xl leading-snug font-semibold text-km-ink">
-                  {curso.titulo}
-                </h3>
-                <p className="text-sm leading-relaxed text-km-ink-soft">{curso.resumo}</p>
-              </div>
-              <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-km-line-soft pt-4 font-mono text-xs text-km-ink-faint">
-                <span>{curso.aulas} aulas</span>
-                <span>{curso.cargaHoraria}</span>
-                <span className="ml-auto text-sm font-medium text-km-brand">{curso.preco}</span>
-              </div>
-            </article>
-          ))}
+          {cursos.map((curso) => {
+            const aulas = contarAulas(curso)
+            return (
+              <Link
+                key={curso.slug}
+                href={`/cursos/${curso.slug}`}
+                className="group flex flex-col gap-4 rounded-xl border border-km-line bg-km-surface p-6 transition-colors hover:border-km-brand"
+              >
+                <div className="flex flex-col gap-2">
+                  <h3 className="font-display text-xl leading-snug font-semibold text-km-ink transition-colors group-hover:text-km-brand">
+                    {curso.titulo}
+                  </h3>
+                  {curso.subtitulo && (
+                    <p className="text-sm leading-relaxed text-km-ink-soft">{curso.subtitulo}</p>
+                  )}
+                  {curso.professor && (
+                    <p className="text-xs text-km-ink-faint">com {curso.professor.nome}</p>
+                  )}
+                </div>
+
+                <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-km-line-soft pt-4 font-mono text-xs text-km-ink-faint">
+                  <span>
+                    {aulas} aula{aulas === 1 ? "" : "s"}
+                  </span>
+                  {curso.cargaHorariaMinutos > 0 && (
+                    <span>{formatarDuracao(curso.cargaHorariaMinutos)}</span>
+                  )}
+                  <span className="ml-auto text-sm font-medium text-km-brand">
+                    {curso.precoCentavos === 0 ? "Gratuito" : formatarPreco(curso.precoCentavos)}
+                  </span>
+                </div>
+              </Link>
+            )
+          })}
         </div>
       )}
     </Secao>
@@ -353,7 +374,7 @@ export function Pagamento() {
 export function CtaFinal() {
   return (
     <section className="border-t border-km-line bg-km-band">
-      <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-5 py-20 text-center sm:px-8 sm:py-24">
+      <div className="mx-auto flex w-full flex-col items-center gap-6 px-5 py-20 text-center sm:px-8 sm:py-24">
         <h2 className="max-w-2xl font-display text-3xl leading-tight font-semibold text-balance text-km-band-ink sm:text-4xl">
           {ctaFinal.titulo}
         </h2>

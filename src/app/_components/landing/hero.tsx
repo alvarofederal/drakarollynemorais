@@ -129,7 +129,7 @@ function PreviaSalaDeAula() {
 export function Hero() {
   return (
     <section className="relative overflow-hidden">
-      <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pt-14 pb-20 sm:px-8 sm:pt-20 sm:pb-28 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
+      <div className="mx-auto grid w-full items-center gap-12 px-5 pt-14 pb-20 sm:px-8 sm:pt-20 sm:pb-28 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
         <div className="flex flex-col items-start gap-6">
           <span className="inline-flex items-center rounded-full border border-km-line bg-km-surface px-3 py-1 text-xs font-medium tracking-wide text-km-brand uppercase">
             {hero.eyebrow}

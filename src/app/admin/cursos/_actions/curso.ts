@@ -87,6 +87,7 @@ export async function atualizarCurso(id: string, entrada: unknown): Promise<Resu
 
   revalidatePath("/admin/cursos")
   revalidatePath(`/admin/cursos/${id}`)
+  revalidatePath("/")
   return { ok: true }
 }
 
@@ -127,6 +128,7 @@ export async function publicarCurso(id: string): Promise<Resultado> {
 
   revalidatePath("/admin/cursos")
   revalidatePath(`/admin/cursos/${id}`)
+  revalidatePath("/")
   return { ok: true }
 }
 
@@ -135,6 +137,7 @@ export async function despublicarCurso(id: string): Promise<Resultado> {
   await prisma.curso.update({ where: { id }, data: { status: "RASCUNHO" } })
   revalidatePath("/admin/cursos")
   revalidatePath(`/admin/cursos/${id}`)
+  revalidatePath("/")
   return { ok: true }
 }
 
@@ -144,6 +147,7 @@ export async function arquivarCurso(id: string): Promise<Resultado> {
   await prisma.curso.update({ where: { id }, data: { status: "ARQUIVADO" } })
   revalidatePath("/admin/cursos")
   revalidatePath(`/admin/cursos/${id}`)
+  revalidatePath("/")
   return { ok: true }
 }
 

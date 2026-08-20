@@ -30,7 +30,7 @@ export function AuthShell({
         }}
       />
 
-      <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-5 py-6 sm:px-8">
+      <header className="mx-auto flex w-full items-center justify-between px-5 py-6 sm:px-8">
         <Wordmark />
         <ThemeToggle />
       </header>

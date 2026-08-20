@@ -5,7 +5,7 @@ import "./globals.css";
 import { SessionAuthProvider } from "@/components/session-auth";
 import { QueryClientContext } from "@/providers/queryclient";
 import { Toaster } from "sonner";
-import { marca } from "@/config/landing";
+import { marca, permitirIndexacao } from "@/config/landing";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -63,9 +63,11 @@ export const metadata: Metadata = {
     description:
       "Aulas em vídeo com slides e materiais para baixar, acesso pelo celular e certificado de conclusão.",
   },
+  // Só entra no Google quando o conteúdo real estiver publicado — ver
+  // `permitirIndexacao` em src/config/landing.ts
   robots: {
-    index: true,
-    follow: true,
+    index: permitirIndexacao,
+    follow: permitirIndexacao,
   },
 };
 

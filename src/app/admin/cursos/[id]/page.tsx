@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, ExternalLink, Eye } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EtiquetaStatus } from "@/app/admin/_components/ui"
@@ -67,6 +67,25 @@ export default async function EditarCursoPage({
               <EtiquetaStatus status={curso.status} />
             </div>
             <p className="font-mono text-xs text-km-ink-faint">/cursos/{curso.slug}</p>
+          </div>
+
+          {/* Pré-visualização: a ADMIN entra na sala de aula sem matrícula,
+              para conferir o que o aluno vai ver antes de liberar o acesso */}
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/aluno/curso/${curso.slug}`}
+              className="inline-flex items-center gap-2 rounded-md border border-km-line px-4 py-2.5 text-sm font-medium text-km-ink transition-colors hover:border-km-brand hover:text-km-brand"
+            >
+              <Eye className="size-4" />
+              Ver como aluno
+            </Link>
+            <Link
+              href={`/cursos/${curso.slug}`}
+              className="inline-flex items-center gap-2 rounded-md border border-km-line px-4 py-2.5 text-sm font-medium text-km-ink transition-colors hover:border-km-brand hover:text-km-brand"
+            >
+              <ExternalLink className="size-4" />
+              Página de vendas
+            </Link>
           </div>
         </div>
 

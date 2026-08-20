@@ -16,11 +16,34 @@
  * CRM e RQE identificados. Ver `spec.md` → Parte 14.
  */
 
+/**
+ * Endereço base do site.
+ *
+ * Ordem: variável explícita → URL que a Vercel injeta no deploy → localhost.
+ * Sem isso, uma prévia na Vercel geraria links canônicos apontando para um
+ * domínio que ainda não existe.
+ */
+function enderecoBase() {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+  if (process.env.NEXT_PUBLIC_VERCEL_URL) return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  return "http://localhost:3000"
+}
+
+/**
+ * Indexação por buscadores é opt-in explícito.
+ *
+ * Enquanto a landing tiver texto de preenchimento sobre a Dra. (especialidade,
+ * CRM, bio), ela NÃO pode aparecer no Google. Só ligar quando o conteúdo real
+ * estiver publicado e revisado. Ver `spec.md` → Parte 14.
+ */
+export const permitirIndexacao = process.env.NEXT_PUBLIC_PERMITIR_INDEXACAO === "true"
+
 export const marca = {
   nome: "Dra. Karollyne Morais",
   nomeCurto: "Karollyne Morais",
   // TODO: confirmar domínio definitivo
-  dominio: process.env.NEXT_PUBLIC_APP_URL ?? "https://karollynemorais.com.br",
+  dominio: enderecoBase(),
   // TODO: número real com DDI/DDD, só dígitos
   whatsapp: "",
   instagram: "",
@@ -35,8 +58,8 @@ export const hero = {
   titulo: "Aprofunde sua prática clínica sem sair do plantão.",
   subtitulo:
     "Aulas em vídeo com slides e materiais para baixar, acesso pelo celular e certificado de conclusão. Conteúdo autoral da Dra. Karollyne Morais.",
-  ctaPrimario: { rotulo: "Ver os cursos", href: "#cursos" },
-  ctaSecundario: { rotulo: "Como funciona", href: "#como-funciona" },
+  ctaPrimario: { rotulo: "Ver os cursos", href: "/#cursos" },
+  ctaSecundario: { rotulo: "Como funciona", href: "/#como-funciona" },
   /**
    * Slot da foto profissional dela. Enquanto for `null`, o hero mostra
    * a prévia da sala de aula — que é o produto em si.
@@ -107,18 +130,11 @@ export const oQueRecebe = [
 ] as const
 
 /**
- * Catálogo.
- * Enquanto vazio, a seção mostra o estado "primeira turma em breve".
- * A partir do Release 2 esta lista sai do banco, não daqui.
+ * O catálogo NÃO fica aqui.
+ * Os cursos vêm do banco (`src/lib/cursos.ts` → `listarCursosDoCatalogo`),
+ * filtrados por status `PUBLICADO`. Publicar pelo painel é o que faz o curso
+ * aparecer na landing — não editar este arquivo.
  */
-export const cursos: {
-  slug: string
-  titulo: string
-  resumo: string
-  cargaHoraria: string
-  aulas: number
-  preco: string
-}[] = []
 
 export const sobre = {
   titulo: "Sobre a Dra. Karollyne Morais",
@@ -199,12 +215,14 @@ export const ctaFinal = {
   titulo: "Pronto para começar?",
   texto:
     "Conheça os cursos disponíveis e comece a estudar hoje, no seu ritmo.",
-  cta: { rotulo: "Ver os cursos", href: "#cursos" },
+  cta: { rotulo: "Ver os cursos", href: "/#cursos" },
 }
 
+// Âncoras absolutas de propósito: o cabeçalho aparece também nas páginas de
+// curso e de autenticação, onde "#sobre" não existe e não levaria a lugar nenhum.
 export const navegacao = [
-  { rotulo: "Como funciona", href: "#como-funciona" },
-  { rotulo: "Cursos", href: "#cursos" },
-  { rotulo: "Sobre", href: "#sobre" },
-  { rotulo: "Dúvidas", href: "#faq" },
+  { rotulo: "Como funciona", href: "/#como-funciona" },
+  { rotulo: "Cursos", href: "/#cursos" },
+  { rotulo: "Sobre", href: "/#sobre" },
+  { rotulo: "Dúvidas", href: "/#faq" },
 ] as const

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import prisma from "@/lib/prisma"
 import { formatarData } from "@/lib/formato"
 
@@ -67,7 +68,9 @@ export default async function AdminAlunosPage() {
                   className="border-b border-km-line-soft last:border-0 hover:bg-km-sunk/50"
                 >
                   <td className="px-5 py-4">
-                    <p className="font-medium text-km-ink">{a.name ?? "—"}</p>
+                    <Link href={`/admin/alunos/${a.id}`} className="font-medium text-km-ink transition-colors hover:text-km-brand">
+                      {a.name ?? a.email}
+                    </Link>
                     <p className="pt-0.5 font-mono text-xs text-km-ink-faint">{a.email}</p>
                   </td>
                   <td className="px-5 py-4 tabular-nums text-km-ink-soft">

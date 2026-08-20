@@ -202,4 +202,88 @@ trecho ainda não visto rodando.
 
 ---
 
-*Próxima versão prevista: v0.5.0 — materiais em R2 e sala de aula do aluno*
+## v0.5.0 — 2026-08-20 — O curso chega ao aluno
+
+Fecha o ciclo: publicar → aparecer no catálogo → liberar acesso → o aluno vê.
+
+**Corrigido**
+- **O catálogo da landing nunca lia o banco.** Vinha de um array fixo em
+  `config/landing.ts`, que estava vazio — então curso publicado não aparecia.
+  Agora vem de `listarCursosDoCatalogo()`, filtrando por `status = PUBLICADO`
+- **Não havia como matricular ninguém.** Sem checkout e sem liberação manual,
+  nenhum aluno conseguia acesso a nada
+
+**Novo**
+- `src/lib/cursos.ts` — consultas de leitura num lugar só: catálogo, página
+  pública e cursos do aluno. Decide num ponto o que é visível publicamente
+- `/cursos/[slug]` — página pública do curso: ementa completa com cadeado nas
+  aulas bloqueadas, aula de amostra marcada, preço, professor e FAQ
+- `/admin/alunos/[id]` — ficha do aluno com matrículas, certificados e dados
+- Liberação manual de acesso (origem `CORTESIA`), com revogação
+- Ativar/desativar a conta do aluno
+- `/aluno` agora lista os cursos matriculados com barra de progresso
+
+**Regras**
+- `expiraEm` é calculado a partir do `tipoAcesso` do curso, nunca digitado
+- Revogar matrícula **não** apaga progresso nem certificado — só o acesso
+- Matrícula já existente é reativada em vez de duplicada
+- Curso `RASCUNHO` nunca é público; `ARQUIVADO` continua acessível por link direto
+
+**Layout**
+- Removidos os `max-w-6xl` e `max-w-5xl` dos contêineres de página, a pedido.
+  As restrições de componente (`max-w-md` no login, `max-w-2xl` nos formulários)
+  foram mantidas — sem elas, formulário e texto corrido ficam ilegíveis em
+  monitor largo
+
+**Verificado no navegador**
+- Curso publicado aparece no catálogo com preço, carga e nº de aulas
+- Página do curso: visitante vê cadeado; matriculado vê "Você já tem acesso"
+- Liberar acesso pela ficha do aluno → matrícula `ativa · cortesia`
+- `/aluno` do matriculado lista o curso com barra de progresso
+- `npx tsc --noEmit` limpo · 30 testes passando · sem erro de console
+
+---
+
+## v0.6.0 — 2026-08-20 — Sala de aula e conserto da navegação
+
+O aluno finalmente assiste. E os links passam a levar a algum lugar.
+
+**Corrigido — a navegação estava quebrada**
+- **O cabeçalho mostrava "Entrar" para quem já estava logado.** Ele era estático e não
+  consultava a sessão; quem entrava achava que tinha caído fora. Agora usa `useSession`
+  e mostra "Minha área" (ou "Painel", para a ADMIN)
+- **Os links do menu eram âncoras relativas** (`#sobre`, `#faq`). Fora da landing não
+  existiam e não faziam nada. Viraram absolutas (`/#sobre`)
+- **"Começar" e "Ir para o curso" levavam à página de vendas**, não para o conteúdo
+- **"Solicitar acesso" ia para `/aluno`** e não solicitava nada. Agora abre o WhatsApp
+  (quando configurado) ou some, em vez de fingir que faz algo
+- `/termos-de-uso` e `/politica-de-privacidade` davam 404 — criadas como páginas
+  honestas de "em elaboração", sem texto jurídico inventado
+
+**Novo — a sala de aula**
+- `/aluno/curso/[slug]` — decide onde retomar e redireciona para a aula certa
+- `/aluno/curso/[slug]/[aulaSlug]` — player, trilha lateral, anterior/próxima
+- Player Cloudflare com **token assinado gerado no servidor**, depois da matrícula
+  ter sido conferida
+- Marca d'água com nome e e-mail de quem assiste, reposicionada a cada 25s
+- "Marcar como concluída" recalcula o percentual a partir da contagem de aulas
+  publicadas — não de um contador incremental, que sairia do lugar
+- Aulas bloqueadas aparecem com cadeado e **não são links**
+
+**Novo — pré-visualização da ADMIN**
+- "Ver como aluno" no editor do curso abre a sala de aula real
+- Faixa de aviso deixando claro que é pré-visualização e que o progresso não conta
+- A ADMIN entra sem matrícula; sem matrícula, não há progresso a registrar
+
+**Verificado**
+- Manifesto HLS assinado responde **200 com `#EXTM3U`** — o vídeo é reproduzível
+- **Token adulterado → 401** — a proteção do conteúdo funciona
+- Marcar concluída: 0% → 100%, botão vira "Concluída"
+- Pré-visualização: faixa presente, player funcionando, sem botão de progresso
+- Todas as 13 rotas respondem: públicas 200, protegidas 307 para o login. Nenhum 404
+- Nenhuma âncora relativa restante no código
+- `npx tsc --noEmit` limpo · 30 testes passando
+
+---
+
+*Próxima versão prevista: v0.7.0 — materiais em R2 e certificado*

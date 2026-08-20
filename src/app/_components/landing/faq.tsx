@@ -9,7 +9,7 @@ import { faq } from "@/config/landing"
 export function Faq() {
   return (
     <section id="faq" className="scroll-mt-20 border-t border-km-line py-20 sm:py-28">
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-5 sm:px-8 lg:grid-cols-[0.8fr_1fr] lg:gap-16">
+      <div className="mx-auto grid w-full gap-10 px-5 sm:px-8 lg:grid-cols-[0.8fr_1fr] lg:gap-16">
         <div className="flex flex-col gap-4">
           <span className="font-mono text-xs tracking-[0.14em] text-km-brand uppercase">
             Dúvidas frequentes
